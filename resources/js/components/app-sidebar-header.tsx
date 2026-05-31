@@ -1,5 +1,8 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { NavUser } from '@/components/nav-user';
+import { NotificationBell } from '@/components/notification-bell';
+import { OrganizationSelector } from '@/components/organization-selector';
+import { ProjectSelector } from '@/components/project-selector';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
@@ -12,9 +15,14 @@ export function AppSidebarHeader({
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border/50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">
             <div className="flex min-w-0 items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
+                <OrganizationSelector />
+                <ProjectSelector />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            <NavUser layout="header" />
+            <div className="flex shrink-0 items-center gap-1">
+                <NotificationBell />
+                <NavUser layout="header" />
+            </div>
         </header>
     );
 }

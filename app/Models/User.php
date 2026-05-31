@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\OrganizationMemberStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -30,5 +33,33 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function ownedOrganizations(): HasMany
+    {
+        return $this->hasMany(Organization::class, 'owner_user_id');
+    }
+
+    public function organizationMemberships(): HasMany
+    {
+        return $this->hasMany(OrganizationMember::class);
+    }
+
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'organization_members')
+            ->withPivot([
+                'organization_role_id',
+                'display_name',
+                'status',
+                'is_primary_org',
+            ])
+            ->withTimestamps();
+    }
+
+    public function activeOrganizations(): BelongsToMany
+    {
+        return $this->organizations()
+            ->wherePivot('status', OrganizationMemberStatus::Active->value);
     }
 }

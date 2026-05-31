@@ -12,5 +12,9 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             DemoUserSeeder::class,
         ]);
+
+        if (filter_var(env('SEED_TCM_DEMO', false), FILTER_VALIDATE_BOOL)) {
+            $this->call(TcmCommandCentreDemoSeeder::class);
+        }
     }
 }

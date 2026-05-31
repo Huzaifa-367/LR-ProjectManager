@@ -16,7 +16,7 @@
 5. [Part B — Command centre parity (Milestone 7)](#part-b--command-centre-parity-milestone-7)
 6. [Part C — AI onboarding & assist (Milestone 8)](#part-c--ai-onboarding--assist-milestone-8)
 7. [Part D — Production platform (Milestone 9)](#part-d--production-platform-milestone-9)
-8. [Part E — Integrations & polish (Milestone 10)](#part-e--integrations--polish-milestone-10)
+8. [Part E — Ops polish (Milestone 10)](#part-e--ops-polish-milestone-10)
 9. [Testing strategy](#9-testing-strategy)
 10. [Master checklist](#10-master-checklist)
 11. [Spec cross-reference index](#11-spec-cross-reference-index)
@@ -89,7 +89,7 @@ flowchart LR
     M6 --> M7[M7 Command centre page]
     M7 --> M8[M8 AI onboarding]
     M7 --> M9[M9 Production platform]
-    M9 --> M10[M10 Integrations]
+    M9 --> M10[M10 Ops polish]
 ```
 
 | Milestone | Name | Spec §19 phase | Tables | Outcome |
@@ -103,8 +103,8 @@ flowchart LR
 | **6** | App shell (header layout) | Phase 1 | — | Org selector + NavUser in header row |
 | **7** | Command centre parity | Phase 2 | + focus, notes | Dashboard, focus pins, reminders, demo seeder |
 | **8** | AI onboarding & assist | Phase 2b | + 4 AI tables | Wizard, proposals, apply flow |
-| **9** | Production platform | Phase 3 | + 12 platform tables | Invites, mail, notifications, audit, comments, exports |
-| **10** | Integrations & polish | Phase 4 | integrations, webhooks | Drive OAuth, webhooks, reports |
+| **9** | Production platform | Phase 3 | + 10 platform tables | Invites, mail, notifications, audit, comments, exports |
+| **10** | Ops polish | Phase 4 | — | Reports, retention, performance, deployment docs |
 
 ---
 
@@ -615,32 +615,20 @@ Build in this **sub-order** (dependencies inside M9):
 
 ---
 
-# Part E — Integrations & polish (Milestone 10)
+# Part E — Ops polish (Milestone 10)
 
-> **Goal:** External integrations, webhooks, reporting, ops polish.
+> **Goal:** Reporting, retention, performance, and deployment polish. **Out of scope:** Google Drive OAuth and outbound webhooks.
 
 **Depends on:** M9  
-**Spec refs:** §8.23–§8.24, Phase 4
+**Spec refs:** §18, Phase 4
 
-### 10.1 Integrations
-
-- [ ] Migration `organization_integrations` — Google Drive OAuth tokens (encrypted)
-- [ ] Settings UI `/settings/integrations`
-- [ ] Attach Drive link picker on tasks (URL field exists from M4; OAuth enhances)
-
-### 10.2 Webhooks
-
-- [ ] Migration `webhook_endpoints`
-- [ ] CRUD + `DeliverWebhookJob` on task/project events
-- [ ] Permission slugs `org.webhooks.*`, `org.integrations.*` (already in registry)
-
-### 10.3 Reports & ops
+### 10.1 Reports & ops
 
 - [ ] Reports dashboard (export summaries, delivery failures)
 - [ ] Horizon / queue monitoring docs
 - [ ] Retention jobs for `ai_audit_logs` (90 days) and activity logs
 
-### 10.4 Final polish
+### 10.2 Final polish
 
 - [ ] Performance pass — eager loads on command centre (§18)
 - [ ] Accessibility pass on command centre + settings
@@ -648,8 +636,8 @@ Build in this **sub-order** (dependencies inside M9):
 
 ### Acceptance
 
-- [ ] Webhook fires on task create (test endpoint)
-- [ ] Integration OAuth flow completes in staging
+- [ ] Export and mail delivery summaries visible to admins
+- [ ] Queue worker and scheduler documented for production deploy
 
 ---
 
@@ -720,17 +708,17 @@ Use this as a sprint-level tracker mapped to spec §19.
 - [ ] **M9.6** Invitation emails
 - [ ] **M9.7** Exports
 
-### Integrations
+### Ops polish
 
-- [ ] **M10** Integrations, webhooks, polish
+- [ ] **M10** Reports, retention, performance, deployment docs
 
-### Tables (29 total — verify after M9)
+### Tables (27 total — verify after M9)
 
 | # | Table | Milestone |
 |---|-------|-----------|
 | 1–13 | Core domain | M1–M7 |
-| 14–25 | Production | M9 |
-| 26–29 | AI | M8 |
+| 14–23 | Production | M9 |
+| 24–27 | AI | M8 |
 
 ---
 

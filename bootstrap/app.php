@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureOrganizationAccess;
+use App\Http\Middleware\EnsureOrganizationAiEnabled;
+use App\Http\Middleware\EnsureOrganizationMember;
+use App\Http\Middleware\EnsureOrganizationPermission;
+use App\Http\Middleware\EnsureProjectAccess;
+use App\Http\Middleware\EnsureProjectPermission;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -30,6 +36,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'org.access' => EnsureOrganizationAccess::class,
+            'org.member' => EnsureOrganizationMember::class,
+            'org.permission' => EnsureOrganizationPermission::class,
+            'org.ai' => EnsureOrganizationAiEnabled::class,
+            'project.access' => EnsureProjectAccess::class,
+            'project.permission' => EnsureProjectPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

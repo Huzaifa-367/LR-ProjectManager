@@ -86,7 +86,8 @@ The TCM Group Dashboard is a single-page **Command Centre** for executive leader
 - Offline-first mobile app
 - Full Gantt / sprint planning
 - Time tracking and billing
-- Native Google Drive OAuth (URL on task only; **Drive OAuth integration deferred to Phase 4**)
+- Native Google Drive OAuth (tasks may store an external URL only; no Drive picker or OAuth)
+- Outbound webhooks and third-party integration OAuth (Slack, Teams, etc.)
 
 ---
 
@@ -167,7 +168,7 @@ Org **Owner** role gets all org permissions. Project **Lead** role gets all proj
 | 12 | `member_daily_focus` | Today's priority pins |
 | 13 | `member_notes` | Personal notes |
 
-**Production platform (12 tables)** — see §8.14–§8.25 and [Appendix E](#appendix-e--production-tables-reference)
+**Production platform (10 tables)** — see §8.14–§8.25 and [Appendix E](#appendix-e--production-tables-reference)
 
 | # | Table | Purpose |
 |---|-------|---------|
@@ -180,18 +181,16 @@ Org **Owner** role gets all org permissions. Project **Lead** role gets all proj
 | 20 | `activity_logs` | Audit trail on tasks, projects, members |
 | 21 | `task_comments` | Collaboration threads on tasks |
 | 22 | `attachments` | Polymorphic file metadata (tasks, projects, comments) |
-| 23 | `webhook_endpoints` | Outbound webhooks for integrations (Phase 4) |
-| 24 | `organization_integrations` | Google Drive / Slack OAuth tokens (Phase 4) |
-| 25 | `export_jobs` | Async CSV/PDF export tracking |
+| 23 | `export_jobs` | Async CSV/PDF export tracking |
 
 **AI & onboarding (4 tables)** — see §8.26–§8.29 and [§22](#22-ai-onboarding--assistant)
 
 | # | Table | Purpose |
 |---|-------|---------|
-| 26 | `ai_sessions` | Conversational sessions (project onboarding, task assist) |
-| 27 | `ai_messages` | User/assistant messages + tool metadata |
-| 28 | `ai_onboarding_proposals` | Structured project plan pending human approval |
-| 29 | `ai_audit_logs` | Tool-call audit for compliance |
+| 24 | `ai_sessions` | Conversational sessions (project onboarding, task assist) |
+| 25 | `ai_messages` | User/assistant messages + tool metadata |
+| 26 | `ai_onboarding_proposals` | Structured project plan pending human approval |
+| 27 | `ai_audit_logs` | Tool-call audit for compliance |
 
 **Framework (existing Laravel)** — not Command Centre–specific but required in production:
 
@@ -202,7 +201,7 @@ Org **Owner** role gets all org permissions. Project **Lead** role gets all proj
 | `sessions` | Web sessions |
 | `password_reset_tokens` | Fortify password reset |
 
-**Total Command Centre tables: 29** (+ framework tables above).
+**Total Command Centre tables: 27** (+ framework tables above).
 
 **No `business_units` or workstream fields.** Organization = company. **Every task belongs to exactly one project.**
 
@@ -689,7 +688,7 @@ Each project stores its **own** `project_roles` rows (materialized from template
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
-│ MySQL / PostgreSQL — 29 Command Centre tables, org_id on all tenant data │
+│ MySQL / PostgreSQL — 27 Command Centre tables, org_id on all tenant data │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -761,7 +760,6 @@ organizationContext: {
 | **Notifications** | `notifications`, `scheduled_notifications`, `member_notification_preferences` | In-app bell + email + cron reminders |
 | **Collaboration** | `task_comments`, `attachments` | Comments and file uploads on tasks |
 | **Audit & exports** | `activity_logs`, `export_jobs` | Compliance trail + async reports |
-| **Integrations** | `webhook_endpoints`, `organization_integrations` | Webhooks, Google Drive (Phase 4) |
 | **AI onboarding** | `ai_sessions`, `ai_messages`, `ai_onboarding_proposals`, `ai_audit_logs` | Project wizard + conversational assistant |
 | **Role bootstrap** | `organization_roles`, `project_roles`, permission pivots | `OrganizationBootstrapService`, `ProjectBootstrapService` |
 
@@ -1014,7 +1012,7 @@ Replaces `daily_priorities` — **no duplicated title**.
 
 ## 8A. Production Platform Tables
 
-Tables required beyond the core PM domain for invites, mail, notifications, collaboration, audit, and integrations.
+Tables required beyond the core PM domain for invites, mail, notifications, collaboration, audit, and exports.
 
 ### 8.14 `organization_invitations`
 
@@ -1253,42 +1251,6 @@ Polymorphic file storage metadata. Binary on `local` / `s3` disk per env.
 | `deleted_at` | timestamp NULL | |
 
 **Indexes:** INDEX `(attachable_type, attachable_id)`; INDEX `(organization_id)`
-
----
-
-### 8.23 `webhook_endpoints` (Phase 4)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `organization_id` | bigint FK | |
-| `name` | varchar(255) | |
-| `url` | varchar(2048) | HTTPS only |
-| `secret` | varchar(255) encrypted | HMAC signing |
-| `events` | json | Subscribed `NotificationEventType` values |
-| `is_active` | boolean | |
-| `last_triggered_at` | timestamp NULL | |
-| `last_failure_at` | timestamp NULL | |
-| `created_at`, `updated_at` | timestamps | |
-
----
-
-### 8.24 `organization_integrations` (Phase 4)
-
-OAuth connections for Google Drive picker, Slack, etc.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `organization_id` | bigint FK | |
-| `provider` | enum | `google_drive`, `slack`, `microsoft_teams` |
-| `config` | json encrypted | OAuth tokens + scopes |
-| `connected_by_member_id` | bigint FK | |
-| `connected_at` | timestamp | |
-| `revoked_at` | timestamp NULL | |
-| `created_at`, `updated_at` | timestamps | |
-
-**Indexes:** UNIQUE `(organization_id, provider)` WHERE revoked_at IS NULL
 
 ---
 
@@ -1725,7 +1687,7 @@ Roles are **fully dynamic**: each org and each project defines custom roles; per
 {layer}.{resource}.{action}[.{qualifier}]
 
 layer     = org | project
-resource  = organizations | members | roles | projects | tasks | reminders | decisions | focus | notes | command-centre | invitations | mail-profiles | notifications | notification-preferences | notification-deliveries | activity-logs | task-comments | attachments | exports | integrations | webhooks | ai-sessions | ai-onboarding | ai-assist
+resource  = organizations | members | roles | projects | tasks | reminders | decisions | focus | notes | command-centre | invitations | mail-profiles | notifications | notification-preferences | notification-deliveries | activity-logs | task-comments | attachments | exports | ai-sessions | ai-onboarding | ai-assist
 action    = index | show | store | update | destroy | archive | sync | reorder | toggle-done | status.update | assignees.sync | permissions.sync
 qualifier = scope.all | scope.own | scope.member   (data scope only — not tied to HTTP verb)
 ```
@@ -1890,18 +1852,6 @@ final class CommandCentrePermissionRegistry
                 'permissions' => [
                     'org.exports.store' => 'Request async export',
                     'org.exports.show' => 'Download completed export',
-                ],
-            ],
-            'integrations' => [
-                'label' => 'Integrations (Phase 4)',
-                'permissions' => [
-                    'org.integrations.index' => 'List integrations',
-                    'org.integrations.store' => 'Connect integration',
-                    'org.integrations.destroy' => 'Disconnect integration',
-                    'org.webhooks.index' => 'List webhooks',
-                    'org.webhooks.store' => 'Create webhook',
-                    'org.webhooks.update' => 'Update webhook',
-                    'org.webhooks.destroy' => 'Delete webhook',
                 ],
             ],
             'ai_onboarding' => [
@@ -2746,12 +2696,12 @@ Seeder: `TcmCommandCentreDemoSeeder.php`
 - [ ] `activity_logs` + admin viewer
 - [ ] `export_jobs` (tasks CSV)
 
-### Phase 4 — Integrations & polish
+### Phase 4 — Ops polish
 
-- [ ] `organization_integrations` (Google Drive picker)
-- [ ] `webhook_endpoints`
 - [ ] Reports dashboard
 - [ ] Horizon / monitoring dashboards
+- [ ] Retention jobs (`ai_audit_logs`, activity logs)
+- [ ] Performance and accessibility pass
 
 ---
 
@@ -2847,8 +2797,7 @@ app/
 ├── Jobs/
 │   ├── SendOrganizationMail.php
 │   ├── DispatchScheduledNotifications.php
-│   ├── ProcessExportJob.php
-│   └── DeliverWebhookJob.php
+│   └── ProcessExportJob.php
 ├── Console/Commands/DispatchScheduledNotificationsCommand.php
 ├── Listeners/
 │   ├── LogTaskActivity.php
@@ -2888,7 +2837,6 @@ app/
 | **Comments** | `task_comments` | Task detail drawer / modal |
 | **Attachments** | `attachments` | Task / project file uploads |
 | **Exports** | `export_jobs` | Tasks → Export CSV |
-| **Integrations** | `organization_integrations`, `webhook_endpoints` | Settings → Integrations (Phase 4) |
 | **AI onboarding** | `ai_sessions`, `ai_onboarding_proposals`, … | Project wizard + assist chat (§22) |
 | **RBAC bootstrap** | Role tables + `CommandCentreRoleTemplateRegistry` | Auto on org/project create (§5.2, §10.4–§10.5) |
 
@@ -2956,7 +2904,6 @@ Schedule::command('exports:purge-expired')->daily();
 | `.../settings/notifications` | Org-wide reminder times | `org.organizations.update` |
 | `.../settings/my-notifications` | Member preference matrix | `org.notification-preferences.show` |
 | `.../settings/activity` | Audit log viewer | `org.activity-logs.index` |
-| `.../settings/integrations` | Google / webhooks | `org.integrations.index` |
 
 Add nav items to `layouts/settings/layout.tsx` (org settings shell) gated by permission slugs.
 
@@ -3357,8 +3304,6 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `org.attachments.destroy` | DELETE | `organizations.attachments.destroy` |
 | `org.exports.store` | POST | `organizations.exports.store` |
 | `org.exports.show` | GET | `organizations.exports.show` |
-| `org.integrations.*` | * | Phase 4 — `org.integrations.index`, `.store`, `.destroy` (§11.3) |
-| `org.webhooks.*` | * | Phase 4 — `org.webhooks.index`, `.store`, `.update`, `.destroy` (§11.3) |
 | `org.ai-sessions.index` | GET | `organizations.ai-sessions.index` |
 | `org.ai-sessions.store` | POST | `organizations.ai-sessions.store` |
 | `org.ai-sessions.show` | GET | `organizations.ai-sessions.show` |
@@ -3408,7 +3353,7 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `project.ai-assist.store` | POST | `projects.ai-assist.messages` |
 | `project.ai-onboarding.propose` | POST | `projects.ai-onboarding.propose` |
 
-**Total catalog:** **87 org slugs** (76 route + 4 scope + 7 Phase 4) + **32 project slugs** (30 route + 2 scope) = **119 assignable permissions**. Auth-only routes (`organizations.index`, `create`, `store`, `select`) and public invite accept have no slug.
+**Total catalog:** **80 org slugs** (76 route + 4 scope) + **32 project slugs** (30 route + 2 scope) = **112 assignable permissions**. Auth-only routes (`organizations.index`, `create`, `store`, `select`) and public invite accept have no slug.
 
 ---
 
@@ -3426,8 +3371,6 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `task_comments` | 2 | → `tasks`, `organization_members` | Task discussion |
 | `attachments` | 2 | → morph attachable | File uploads |
 | `export_jobs` | 3 | → `organizations` | Async CSV exports |
-| `webhook_endpoints` | 4 | → `organizations` | Outbound event hooks |
-| `organization_integrations` | 4 | → `organizations` | Google Drive OAuth |
 
 **AI & onboarding tables (Phase 2b):**
 
@@ -3468,8 +3411,8 @@ Quick reference — authoritative detail in §11.4–11.5.
 
 | Check | Result |
 |-------|--------|
-| §3.1 lists 29 Command Centre tables | ✓ |
-| §8.1–§8.13 core + §8.14–§8.25 production + §8.26–§8.29 AI | ✓ 29 definitions |
+| §3.1 lists 27 Command Centre tables | ✓ |
+| §8.1–§8.13 core + §8.14–§8.25 production + §8.26–§8.29 AI | ✓ 27 definitions |
 | Inventory names match §8 section titles | ✓ |
 | `task_assignees` counted as pivot in §3.1 note | ✓ (13 core + pivot) |
 | Framework tables documented separately | ✓ |
@@ -3485,22 +3428,21 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `member_daily_focus` | `task_id` must be `kind=task` | UNIQUE `(member, task, focus_date)`; cap from org settings |
 | `project_members` | UNIQUE `(project_id, organization_member_id)` | |
 
-### F.3 Permission catalog — PASS (with Phase 4 caveat)
+### F.3 Permission catalog — PASS
 
-| Layer | Route slugs | Scope slugs | Phase 4 only | Total |
-|-------|-------------|-------------|--------------|-------|
-| Org | 76 | 4 | 7 | **87** |
-| Project | 30 | 2 | 0 | **32** |
-| **Combined assignable** | | | | **119** |
+| Layer | Route slugs | Scope slugs | Total |
+|-------|-------------|-------------|-------|
+| Org | 76 | 4 | **80** |
+| Project | 30 | 2 | **32** |
+| **Combined assignable** | | | **112** |
 
 **Auth-only (no slug):** `organizations.index`, `organizations.create`, `organizations.store`, `organizations.select`, public invite accept.
 
 **Cross-checks:**
 
-- §11.3 `orgGroups()` slugs match §11.4 route table (excluding scope + Phase 4) — ✓
+- §11.3 `orgGroups()` slugs match §11.4 route table (excluding scope slugs) — ✓
 - §11.5 project routes match Appendix D project table — ✓ 32/32
 - Appendix D org table includes AI slugs + `org.mail-profiles.oauth.callback` — ✓
-- Phase 4 `org.integrations.*` / `org.webhooks.*` in registry but **no HTTP routes yet** — documented as Phase 4; wildcard rows in Appendix D
 
 **Role template alignment:**
 
@@ -3535,9 +3477,9 @@ Quick reference — authoritative detail in §11.4–11.5.
 | §2 headers misnumbered as 4.x | Renamed to §2.1–§2.3 |
 | Stale "Org-level tasks" assignee rule | Removed; all tasks require `project_id` |
 | §5.3 `viewer` listed `scope.all` | Corrected to `scope.own` + `scope.member` |
-| §6.1 said "13 tables" | Updated to 29 |
+| §6.1 said "13 tables" | Updated to 27 |
 | Default `settings` missing `ai_enabled` | Added to §8.2 + §9 JSON |
-| Appendix D catalog count approximate | Set to exact 87 + 32 = 119 |
+| Appendix D catalog count approximate | Set to exact 80 + 32 = 112 |
 | Missing `StoreOrganizationRequest` | Added §14 |
 | Missing Gmail OAuth slug in Appendix D | Added `org.mail-profiles.oauth.callback` |
 

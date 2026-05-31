@@ -16,12 +16,12 @@ class ExampleTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_home(): void
+    public function test_authenticated_users_are_redirected_to_organization_home(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('home'))
-            ->assertOk();
+            ->assertRedirect(route('organizations.index'));
     }
 }
