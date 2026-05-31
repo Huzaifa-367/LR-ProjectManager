@@ -14,10 +14,8 @@ class DemoUserSeeder extends Seeder
     {
         $hash = Hash::make(self::PASSWORD);
 
-        $this->seed('SiteGuard Admin', 'admin@siteguard.test', 'super_admin', $hash);
-        $this->seed('Hannah HSE', 'hse@siteguard.test', 'hse_manager', $hash);
-        $this->seed('Sam Supervisor', 'supervisor@siteguard.test', 'site_supervisor', $hash);
-        $this->seed('Vera Viewer', 'viewer@siteguard.test', 'viewer', $hash);
+        $this->seed('TCM Admin', 'admin@gmail.com', 'super_admin', $hash);
+        $this->seed('Platform Admin', 'platform@gmail.com', 'platform_admin', $hash);
     }
 
     private function seed(string $name, string $email, string $role, string $hash): User

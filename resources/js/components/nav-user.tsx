@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { ChevronsUpDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,14 +15,56 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
-export function NavUser() {
+type NavUserProps = {
+    layout?: 'sidebar' | 'header';
+};
+
+export function NavUser({ layout = 'sidebar' }: NavUserProps) {
     const { auth } = usePage().props;
     const { state } = useSidebar();
     const isMobile = useIsMobile();
 
     if (!auth.user) {
         return null;
+    }
+
+    const menuContent = (
+        <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            align="end"
+            side={
+                layout === 'header' || isMobile
+                    ? 'bottom'
+                    : state === 'collapsed'
+                      ? 'left'
+                      : 'bottom'
+            }
+        >
+            <UserMenuContent user={auth.user} />
+        </DropdownMenuContent>
+    );
+
+    if (layout === 'header') {
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            'h-10 gap-2 px-2',
+                            'data-[state=open]:bg-accent',
+                        )}
+                        data-test="header-user-menu-button"
+                    >
+                        <UserInfo user={auth.user} showName={false} />
+                        <ChevronsUpDown className="size-4 text-muted-foreground" />
+                    </Button>
+                </DropdownMenuTrigger>
+                {menuContent}
+            </DropdownMenu>
+        );
     }
 
     return (
@@ -38,19 +81,7 @@ export function NavUser() {
                             <ChevronsUpDown className="ml-auto size-4" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                        align="end"
-                        side={
-                            isMobile
-                                ? 'bottom'
-                                : state === 'collapsed'
-                                  ? 'left'
-                                  : 'bottom'
-                        }
-                    >
-                        <UserMenuContent user={auth.user} />
-                    </DropdownMenuContent>
+                    {menuContent}
                 </DropdownMenu>
             </SidebarMenuItem>
         </SidebarMenu>

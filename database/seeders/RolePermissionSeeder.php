@@ -35,32 +35,17 @@ class RolePermissionSeeder extends Seeder
         $superAdmin = Role::firstOrCreate(
             ['name' => 'super_admin', 'guard_name' => 'web'],
             [
-                'description' => 'Fixed system role with full access.',
+                'description' => 'Fixed system role with full platform access.',
                 'is_system' => true,
             ],
         );
         $superAdmin->syncPermissions($all);
 
-        $this->upsertRole('hse_manager', 'HSE manager with site operations and alert handling.', array_merge(
-            PermissionRegistry::forGroups(['sites', 'locations', 'modules', 'cameras', 'zones', 'alerts', 'investigations', 'ai', 'users', 'reports']),
-            ['sites.access_all'],
-        ));
-
-        $this->upsertRole('site_supervisor', 'Supervisor for assigned sites.', array_merge(
-            PermissionRegistry::forGroup('sites'),
-            ['sites.view', 'sites.update'],
-            PermissionRegistry::forGroups(['locations', 'modules', 'cameras', 'zones', 'alerts']),
-            ['alerts.acknowledge', 'alerts.dismiss', 'alerts.assign', 'ai.assistant.use'],
-        ));
-
-        $this->upsertRole('viewer', 'Read-only safety dashboard access.', [
-            'sites.view',
-            'modules.view',
-            'cameras.view',
-            'rules.view',
-            'alerts.view',
-            'reports.export',
-        ]);
+        $this->upsertRole(
+            'platform_admin',
+            'Manage platform users, roles, and settings.',
+            PermissionRegistry::all(),
+        );
     }
 
     /**
@@ -68,8 +53,8 @@ class RolePermissionSeeder extends Seeder
      */
     private function upsertRole(string $name, string $description, array $permissions): void
     {
-            $role = Role::firstOrCreate(
-                ['name' => $name, 'guard_name' => 'web'],
+        $role = Role::firstOrCreate(
+            ['name' => $name, 'guard_name' => 'web'],
             ['description' => $description, 'is_system' => false],
         );
 

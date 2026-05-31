@@ -29,7 +29,7 @@
 |------|--------|
 | **Order matters** | Complete milestones in sequence unless a step explicitly says “parallel”. Later milestones assume earlier deliverables exist. |
 | **Spec is source of truth** | Field names, permission slugs, route names, and business rules live in the technical spec. This guide tells you **when** and **in what order** to build them. |
-| **Mirror existing patterns** | Copy SiteGuard / LR-POS patterns: `SelectedSiteManager` → `SelectedOrganizationManager`, `site-selector.tsx` → `organization-selector.tsx`, Form Requests, Wayfinder forms, feature tests. |
+| **Follow repo conventions** | Match existing auth, settings, layout, and `PermissionRegistry` patterns; implement org context per technical spec §6.2. |
 | **One vertical slice at a time** | Prefer: migration → model → policy → controller → request → route → page → test — per feature, not “all migrations then all controllers”. |
 | **Checkboxes** | Use `- [ ]` items as PR / sprint tasks. Mark complete only when acceptance criteria pass. |
 
@@ -59,23 +59,20 @@
 | Routes | New file `routes/command_centre.php`; `require` from `routes/web.php` |
 | Controllers | `app/Http/Controllers/CommandCentre/` for tenant dashboard; top-level for org CRUD |
 | Requests | `app/Http/Requests/CommandCentre/` or `Organizations/` |
-| Support | `app/Support/` — stateless helpers (mirror `SelectedSiteManager`, `PermissionRegistry`) |
+| Support | `app/Support/` — stateless helpers (`SelectedOrganizationManager`, `CommandCentrePermissionRegistry`, visibility scopes) |
+| Shared props | `HandleInertiaRequests::share()` — add `organizationContext` (see spec §6.2) |
 | Policies | `app/Policies/` — one policy per model |
 | Frontend pages | `resources/js/pages/organizations/…`, `resources/js/pages/command-centre/…` |
 | Types | Extend `resources/js/types/`; re-export from `index.ts` |
-| Shared props | `HandleInertiaRequests::share()` — add `organizationContext` (keep `siteContext` for SiteGuard until split) |
 
-### 2.3 Patterns to copy from codebase
+### 2.3 Existing code to extend
 
-| Command Centre | Copy from |
-|----------------|-----------|
-| `SelectedOrganizationManager` | `app/Support/SelectedSiteManager.php` |
-| `OrganizationContextController` | `app/Http/Controllers/SiteContextController.php` |
-| `EnsureOrganizationAccess` | `app/Http/Middleware/EnsureSiteAccess.php` |
-| `use-organization-context.ts` | `resources/js/hooks/use-site-context.ts` |
-| `organization-selector.tsx` | `resources/js/components/site-selector.tsx` |
-| AI agents | `app/Ai/` (SiteGuard assistant pattern) |
-| Permission registry UI | Settings roles pages + `PermissionRegistry` |
+| Command Centre | Extend from (in repo today) |
+|----------------|----------------------------|
+| Permission registry UI | `resources/js/pages/roles/index.tsx` + `PermissionRegistry` |
+| App shell | `AppSidebarLayout`, `app-sidebar-header.tsx`, `nav-user.tsx` |
+| Org context (new) | Spec §6.2 — `SelectedOrganizationManager`, `organization-selector.tsx` |
+| AI agents (later) | Laravel AI package — spec §22, `app/Ai/` (create fresh) |
 
 ---
 
@@ -152,7 +149,7 @@ flowchart LR
 ### Acceptance
 
 - [ ] `php artisan route:list --name=organizations` shows no errors (even if routes 404)
-- [ ] App boots; SiteGuard unchanged
+- [ ] App boots on a clean Command Centre foundation
 
 ---
 

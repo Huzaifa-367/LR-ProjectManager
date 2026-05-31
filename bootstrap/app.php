@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Middleware\EnsureSelectedSite;
-use App\Http\Middleware\EnsureSiteAccess;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -32,8 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
-            'site.access' => EnsureSiteAccess::class,
-            'selected.site' => EnsureSelectedSite::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
