@@ -6,6 +6,7 @@ use App\Enums\AiSessionContext;
 use App\Enums\AiSessionStatus;
 use App\Enums\OnboardingProposalStatus;
 use App\Enums\TaskKind;
+use App\Models\AiMessage;
 use App\Models\AiOnboardingProposal;
 use App\Models\AiSession;
 use App\Models\Project;
@@ -185,13 +186,13 @@ class AiOnboardingTest extends TestCase
                     'title' => 'Integrate SSO with identity provider',
                     'description' => "Objective: Enable secure vendor login.\nSteps:\n- Configure IdP integration\n- Validate SSO flows\nAcceptance: SSO passes UAT.",
                     'priority' => 'high',
-                    'deadline_type' => 'date',
+                    'deadline_date' => now()->addWeek()->toDateString(),
                 ],
                 [
                     'title' => 'Migrate legacy vendor records',
                     'description' => "Objective: Move vendors to the new portal.\nSteps:\n- Map legacy fields\n- Run migration pilot\nAcceptance: Pilot vendors onboarded.",
                     'priority' => 'high',
-                    'deadline_type' => 'none',
+                    'deadline_date' => null,
                 ],
             ],
             'decisions' => [
@@ -586,7 +587,7 @@ TXT;
             'status' => AiSessionStatus::Active,
         ]);
 
-        \App\Models\AiMessage::query()->create([
+        AiMessage::query()->create([
             'ai_session_id' => $session->id,
             'role' => 'user',
             'content' => 'Old brief that should disappear after reset',

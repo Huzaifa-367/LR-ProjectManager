@@ -109,8 +109,7 @@ final class OnboardingPlanGenerator
                 'description' => trim(Utf8::sanitize((string) ($task['description'] ?? ''))),
                 'priority' => $this->normalizePriority((string) ($task['priority'] ?? 'medium')),
                 'status' => 'pending',
-                'deadline_type' => $this->normalizeDeadlineType((string) ($task['deadline_type'] ?? 'none')),
-                'deadline_date' => null,
+                'deadline_date' => $this->resolveDeadlineDate($task),
                 'assignee_member_ids' => [$leadMemberId],
                 'kind' => 'task',
             ];
@@ -181,10 +180,19 @@ final class OnboardingPlanGenerator
         return in_array($priority, ['high', 'medium', 'low'], true) ? $priority : 'medium';
     }
 
-    private function normalizeDeadlineType(string $deadlineType): string
+    /**
+     * @param  array<string, mixed>  $task
+     */
+    private function resolveDeadlineDate(array $task): ?string
     {
-        return in_array($deadlineType, ['today', 'this_week', 'date', 'none'], true)
-            ? $deadlineType
-            : 'none';
+        if (isset($task['deadline_date']) && is_string($task['deadline_date']) && $task['deadline_date'] !== '') {
+            return $task['deadline_date'];
+        }
+
+        return match ((string) ($task['deadline_type'] ?? 'none')) {
+            'today' => now()->toDateString(),
+            'this_week' => now()->endOfWeek()->toDateString(),
+            default => null,
+        };
     }
 }

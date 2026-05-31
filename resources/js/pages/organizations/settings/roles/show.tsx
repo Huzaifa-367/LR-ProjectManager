@@ -8,6 +8,7 @@ import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
+import { buildOrganizationSettingsNav } from '@/lib/organization-settings-nav';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
@@ -56,6 +57,14 @@ export default function OrganizationRoleShow({
                     organization.id,
                 )}
                 backLabel="All roles"
+                nav={buildOrganizationSettingsNav(
+                    organization.id,
+                    permissions,
+                    OrganizationRoleController.show.url([
+                        organization.id,
+                        role.id,
+                    ]),
+                )}
             >
                 <div className="flex flex-wrap gap-2">
                     {role.is_system && (

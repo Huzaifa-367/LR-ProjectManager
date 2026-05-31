@@ -28,14 +28,18 @@ final class ScheduleTaskDeadlineReminders
         $reminderDays = $notificationSettings['task_due_reminder_days'] ?? [1, 0];
         $reminderTime = (string) ($notificationSettings['task_due_reminder_time'] ?? '08:00');
 
+        $dueAt = CarbonImmutable::parse($task->deadline_date)->timezone($timezone);
+
         /** @var list<string> $validDedupeKeys */
         $validDedupeKeys = [];
 
         foreach ($task->assignees as $assignee) {
             foreach ($reminderDays as $offset) {
-                $triggerAt = CarbonImmutable::parse($task->deadline_date->format('Y-m-d'), $timezone)
-                    ->subDays((int) $offset)
-                    ->setTimeFromTimeString($reminderTime);
+                $triggerAt = (int) $offset === 0
+                    ? $dueAt
+                    : $dueAt->startOfDay()
+                        ->subDays((int) $offset)
+                        ->setTimeFromTimeString($reminderTime);
 
                 $dedupeKey = sprintf(
                     'task:%d:due_soon:member:%d:%s',
@@ -59,7 +63,7 @@ final class ScheduleTaskDeadlineReminders
                         'payload' => [
                             'task_id' => $task->id,
                             'task_title' => $task->title,
-                            'deadline_date' => $task->deadline_date->format('Y-m-d'),
+                            'deadline_date' => $task->deadline_date->toIso8601String(),
                         ],
                         'status' => ScheduledNotificationStatus::Pending,
                         'cancelled_at' => null,

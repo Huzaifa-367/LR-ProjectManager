@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
@@ -32,12 +33,13 @@ Output rules:
 - Group related bullets into cohesive work packages when the brief is a feature list or specification.
 - Include 5–12 tasks for substantial briefs; fewer for small scopes.
 - Include 1–3 decisions and 1–2 reminders when the brief supports them.
+- When a task has a clear due timing, set deadline_date as YYYY-MM-DDTHH:MM (24-hour). Otherwise omit it.
 - Profile hint from prior analysis: {$profileKey}
 TXT;
     }
 
     /**
-     * @return array<string, \Illuminate\JsonSchema\Types\Type>
+     * @return array<string, Type>
      */
     public function schema(JsonSchema $schema): array
     {
@@ -45,7 +47,7 @@ TXT;
             'title' => $schema->string()->required(),
             'description' => $schema->string()->required(),
             'priority' => $schema->string()->enum(['high', 'medium', 'low'])->required(),
-            'deadline_type' => $schema->string()->enum(['today', 'this_week', 'date', 'none'])->required(),
+            'deadline_date' => $schema->string()->nullable(),
         ]);
 
         $decision = $schema->object([

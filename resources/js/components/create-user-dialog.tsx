@@ -2,11 +2,9 @@ import { Form } from '@inertiajs/react';
 import { useState } from 'react';
 import UserRoleController from '@/actions/App/Http/Controllers/Settings/UserRoleController';
 import InputError from '@/components/input-error';
-import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
     DialogBody,
     DialogContent,
     DialogDescription,

@@ -1,35 +1,28 @@
-import ExportController from '@/actions/App/Http/Controllers/ExportController';
-import TaskController from '@/actions/App/Http/Controllers/CommandCentre/TaskController';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Download } from 'lucide-react';
+import ExportController from '@/actions/App/Http/Controllers/ExportController';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { CreateTaskDialog } from '@/components/command-centre/create-task-dialog';
-import { EmptyState } from '@/components/command-centre/empty-state';
 import { PageShell } from '@/components/command-centre/page-shell';
-import { StatusPill } from '@/components/command-centre/status-pill';
-import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
+import { ProjectKanban } from '@/components/command-centre/project-kanban';
+import type { TaskTeamMemberOption } from '@/components/command-centre/task-assignee-picker';
+import { TasksCalendarView } from '@/components/command-centre/tasks-calendar-view';
+import type { TasksListItem } from '@/components/command-centre/tasks-list-view';
+import { TasksListView } from '@/components/command-centre/tasks-list-view';
+import { TasksViewToolbar } from '@/components/command-centre/tasks-view-toolbar';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
+import { useTasksViewPreference } from '@/hooks/use-tasks-view-preference';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
 } from '@/types/organization';
 
-type TaskListItem = {
-    id: number;
-    kind: string;
-    project_id: number;
-    project_name: string | undefined;
-    title: string;
-    status: string;
-    is_done: boolean;
-    assignees: Array<{ id: number; display_name: string | null }>;
-};
-
 type TasksIndexProps = {
     organization: OrganizationSummary;
-    tasks: TaskListItem[];
+    tasks: TasksListItem[];
     projects: Array<{ id: number; name: string }>;
+    projectTeams: Record<number, TaskTeamMemberOption[]>;
     filters: { project_id: number | null; kind: string | null };
     permissions: CommandCentrePermissions;
 };
@@ -38,11 +31,14 @@ export default function TasksIndex({
     organization,
     tasks,
     projects,
+    projectTeams,
     filters,
     permissions,
 }: TasksIndexProps) {
     const canCreate = canOrg(permissions.org, 'org.tasks.store');
     const canExport = canOrg(permissions.org, 'org.exports.store');
+    const { view, calendarPeriod, setView, setCalendarPeriod } =
+        useTasksViewPreference();
 
     const requestExport = (): void => {
         router.post(
@@ -58,6 +54,13 @@ export default function TasksIndex({
         );
     };
 
+    const viewDescription =
+        view === 'kanban'
+            ? 'Drag cards between columns to update status.'
+            : view === 'calendar'
+              ? 'Tasks are grouped by due date. Use month, week, or day to change the calendar layout.'
+              : 'Use the header project selector to filter by project.';
+
     return (
         <>
             <Head title="Tasks" />
@@ -71,6 +74,7 @@ export default function TasksIndex({
                             <CreateTaskDialog
                                 organizationId={organization.id}
                                 projects={projects}
+                                projectTeams={projectTeams}
                             />
                         )}
                         {canExport && (
@@ -89,48 +93,36 @@ export default function TasksIndex({
             >
                 <CommandCard
                     title="All tasks"
-                    description="Use the header project selector to filter by project."
+                    description={viewDescription}
                     dot="crimson"
                 >
-                    {tasks.length === 0 ? (
-                        <EmptyState>
-                            No tasks match your visibility scope.
-                        </EmptyState>
-                    ) : (
-                        <ul className="divide-y divide-border/50">
-                            {tasks.map((task) => (
-                                <li key={task.id} className="tcm-list-row">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                                            <TaskKindBadge kind={task.kind} />
-                                            <Link
-                                                href={TaskController.show.url([
-                                                    organization.id,
-                                                    task.id,
-                                                ])}
-                                                className={`truncate text-sm font-medium hover:text-primary hover:underline ${task.is_done ? 'text-muted-foreground line-through' : ''}`}
-                                            >
-                                                {task.title}
-                                            </Link>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {task.project_name ?? 'Project'}
-                                        </p>
-                                    </div>
-                                    <StatusPill status={task.status} />
-                                    <Button asChild variant="ghost" size="sm">
-                                        <Link
-                                            href={TaskController.show.url([
-                                                organization.id,
-                                                task.id,
-                                            ])}
-                                        >
-                                            Open
-                                        </Link>
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
+                    <div className="mb-4 border-b border-border/50 pb-4">
+                        <TasksViewToolbar
+                            view={view}
+                            calendarPeriod={calendarPeriod}
+                            onViewChange={setView}
+                            onCalendarPeriodChange={setCalendarPeriod}
+                        />
+                    </div>
+                    {view === 'list' && (
+                        <TasksListView
+                            organizationId={organization.id}
+                            tasks={tasks}
+                        />
+                    )}
+                    {view === 'kanban' && (
+                        <ProjectKanban
+                            organizationId={organization.id}
+                            tasks={tasks}
+                            permissions={permissions}
+                        />
+                    )}
+                    {view === 'calendar' && (
+                        <TasksCalendarView
+                            organizationId={organization.id}
+                            tasks={tasks}
+                            period={calendarPeriod}
+                        />
                     )}
                 </CommandCard>
             </PageShell>

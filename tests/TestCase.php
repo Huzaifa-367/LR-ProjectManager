@@ -31,13 +31,13 @@ abstract class TestCase extends BaseTestCase
                         'title' => 'Research target regions',
                         'description' => "Objective: Validate market entry assumptions.\nSteps:\n- Interview regional stakeholders\n- Document regulatory constraints\nAcceptance: Research summary approved.",
                         'priority' => 'high',
-                        'deadline_type' => 'this_week',
+                        'deadline_date' => now()->endOfWeek()->toDateString(),
                     ],
                     [
                         'title' => 'Onboard regional vendors',
                         'description' => "Objective: Establish vendor pipeline.\nSteps:\n- Shortlist vendors\n- Complete legal review\nAcceptance: Vendor contracts signed.",
                         'priority' => 'medium',
-                        'deadline_type' => 'none',
+                        'deadline_date' => null,
                     ],
                 ],
                 'decisions' => [

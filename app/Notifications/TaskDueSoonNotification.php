@@ -29,7 +29,7 @@ class TaskDueSoonNotification extends Notification
     public function toArray(object $notifiable): array
     {
         $organization = $this->task->organization;
-        $deadline = $this->task->deadline_date?->format('M j, Y');
+        $deadline = $this->task->deadline_date?->format('M j, Y g:i A');
 
         return [
             'title' => __('Task due soon'),

@@ -9,6 +9,7 @@ import {
     TaskAssigneePicker,
     type TaskTeamMemberOption,
 } from '@/components/command-centre/task-assignee-picker';
+import { TaskDueDateField } from '@/components/command-centre/task-due-date-field';
 import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +32,7 @@ type CreateTaskDialogProps = {
     projects: Array<{ id: number; name: string }>;
     defaultProjectId?: number;
     teamMembers?: TaskTeamMemberOption[];
+    projectTeams?: Record<number, TaskTeamMemberOption[]>;
     trigger?: React.ReactNode;
 };
 
@@ -39,6 +41,7 @@ export function CreateTaskDialog({
     projects,
     defaultProjectId,
     teamMembers = [],
+    projectTeams = {},
     trigger,
 }: CreateTaskDialogProps) {
     const { selectedProject } = useOrganizationContext();
@@ -56,10 +59,17 @@ export function CreateTaskDialog({
     const resolvedProjectId =
         projectId ?? defaultProjectId ?? projects[0]?.id ?? undefined;
 
-    const assigneeOptions = useMemo(
-        () => teamMembers,
-        [teamMembers],
-    );
+    const assigneeOptions = useMemo(() => {
+        if (teamMembers.length > 0) {
+            return teamMembers;
+        }
+
+        if (resolvedProjectId !== undefined) {
+            return projectTeams[resolvedProjectId] ?? [];
+        }
+
+        return [];
+    }, [teamMembers, projectTeams, resolvedProjectId]);
 
     if (projects.length === 0) {
         return null;
@@ -84,7 +94,7 @@ export function CreateTaskDialog({
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Create work item</DialogTitle>
                     <DialogDescription>
@@ -194,6 +204,26 @@ export function CreateTaskDialog({
                                     disabled={processing}
                                     error={errors.priority}
                                 />
+                            </div>
+
+                            <TaskDueDateField
+                                id="create-task-due-date"
+                                disabled={processing}
+                                error={errors.deadline_date}
+                            />
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="create-task-link">
+                                    External link
+                                </Label>
+                                <Input
+                                    id="create-task-link"
+                                    name="external_link"
+                                    type="url"
+                                    disabled={processing}
+                                    placeholder="https://"
+                                />
+                                <InputError message={errors.external_link} />
                             </div>
 
                             {assigneeOptions.length > 0 && (

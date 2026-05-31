@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\CommandCentre;
 
-use App\Enums\DeadlineType;
 use App\Enums\TaskKind;
 use App\Models\MemberDailyFocus;
 use App\Models\Task;
@@ -126,7 +125,7 @@ class MemberDailyFocusTest extends TestCase
             'title' => 'Due today',
             'created_by_member_id' => $member->id,
             'status' => 'pending',
-            'deadline_type' => DeadlineType::Today,
+            'deadline_date' => now()->toDateString(),
         ]);
         $task->assignees()->attach($member->id, [
             'is_primary' => true,

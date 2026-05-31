@@ -83,6 +83,8 @@ class TaskController extends Controller
             ->get(['id', 'name'])
             ->all();
 
+        $projectIds = array_map(fn (Project $project): int => $project->id, $projects);
+
         return Inertia::render('tasks/index', [
             'organization' => [
                 'id' => $organization->id,
@@ -91,6 +93,7 @@ class TaskController extends Controller
             ],
             'tasks' => $tasks,
             'projects' => $projects,
+            'projectTeams' => $this->presentProjectTeams($projectIds),
             'filters' => [
                 'project_id' => $projectFilter,
                 'kind' => $request->string('kind')->toString() ?: null,
@@ -120,7 +123,6 @@ class TaskController extends Controller
             'created_by_member_id' => $member->id,
             'priority' => $validated['priority'] ?? null,
             'status' => $validated['status'] ?? TaskStatus::Pending,
-            'deadline_type' => $validated['deadline_type'] ?? null,
             'deadline_date' => $validated['deadline_date'] ?? null,
             'external_link' => $validated['external_link'] ?? null,
             'meta' => $validated['meta'] ?? null,
@@ -212,9 +214,20 @@ class TaskController extends Controller
         abort_unless($permissions->memberCanUpdateTask($member, $task), 403);
 
         $validated = $request->validated();
+        $assigneeMemberIds = $validated['assignee_member_ids'] ?? null;
+        unset($validated['assignee_member_ids']);
+
         $validated = app(NormalizeTaskCompletion::class)->mergeForUpdate($task, $member, $validated);
 
         $task->update($validated);
+
+        if ($assigneeMemberIds !== null) {
+            abort_unless($permissions->memberCan($member, 'org.tasks.assignees.sync'), 403);
+
+            $newAssigneeIds = $this->syncAssigneeIds($task, $member, $assigneeMemberIds);
+            $task->load(['assignees', 'organization']);
+            $this->notifyNewAssignees($task, $member, $newAssigneeIds);
+        }
 
         app(SyncMemberDailyFocus::class)->syncForTask($task->fresh(['assignees']));
 
@@ -399,5 +412,34 @@ class TaskController extends Controller
 
             $dispatcher->dispatchTaskAssigned($task, $assignee, $assignedBy);
         }
+    }
+
+    /**
+     * @param  list<int>  $projectIds
+     * @return array<int, list<array{id: int, display_name: string|null, role_name: string|null|undefined}>>
+     */
+    private function presentProjectTeams(array $projectIds): array
+    {
+        if ($projectIds === []) {
+            return [];
+        }
+
+        $teams = [];
+
+        $projectMembers = ProjectMember::query()
+            ->whereIn('project_id', $projectIds)
+            ->with(['organizationMember', 'role'])
+            ->orderBy('joined_at')
+            ->get();
+
+        foreach ($projectMembers as $projectMember) {
+            $teams[$projectMember->project_id][] = [
+                'id' => $projectMember->organization_member_id,
+                'display_name' => $projectMember->organizationMember?->display_name,
+                'role_name' => $projectMember->role?->name,
+            ];
+        }
+
+        return $teams;
     }
 }

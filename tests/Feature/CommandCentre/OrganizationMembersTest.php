@@ -136,6 +136,70 @@ class OrganizationMembersTest extends TestCase
         ]);
     }
 
+    public function test_adding_member_with_selected_role(): void
+    {
+        $owner = User::factory()->create();
+        $organization = app(OrganizationBootstrapService::class)->create($owner, [
+            'name' => 'Role Select Org',
+        ]);
+
+        $adminRole = $organization->roles()->where('slug', 'admin')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('organizations.members.store', $organization), [
+                'display_name' => 'Org Admin',
+                'email' => 'orgadmin@example.com',
+                'organization_role_id' => $adminRole->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('organization_members', [
+            'organization_id' => $organization->id,
+            'email' => 'orgadmin@example.com',
+            'organization_role_id' => $adminRole->id,
+        ]);
+    }
+
+    public function test_owner_can_update_member_role_and_details(): void
+    {
+        $owner = User::factory()->create();
+        $organization = app(OrganizationBootstrapService::class)->create($owner, [
+            'name' => 'Edit Member Org',
+        ]);
+
+        $memberRole = $organization->roles()->where('slug', 'member')->firstOrFail();
+        $adminRole = $organization->roles()->where('slug', 'admin')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('organizations.members.store', $organization), [
+                'display_name' => 'Editable Member',
+                'email' => 'editable@example.com',
+                'title' => 'Analyst',
+                'organization_role_id' => $memberRole->id,
+            ])
+            ->assertRedirect();
+
+        $member = OrganizationMember::query()
+            ->where('organization_id', $organization->id)
+            ->where('email', 'editable@example.com')
+            ->firstOrFail();
+
+        $this->actingAs($owner)
+            ->patch(route('organizations.members.update', [$organization, $member]), [
+                'display_name' => 'Updated Member',
+                'email' => 'editable@example.com',
+                'title' => 'Lead Analyst',
+                'organization_role_id' => $adminRole->id,
+            ])
+            ->assertRedirect();
+
+        $member->refresh();
+
+        $this->assertSame('Updated Member', $member->display_name);
+        $this->assertSame('Lead Analyst', $member->title);
+        $this->assertSame($adminRole->id, $member->organization_role_id);
+    }
+
     public function test_disabled_member_cannot_access_tenant_routes(): void
     {
         $owner = User::factory()->create();

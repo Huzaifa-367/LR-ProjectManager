@@ -140,6 +140,7 @@
 
     body {
         @apply bg-background text-foreground;
+        scrollbar-gutter: stable;
     }
 }
 
@@ -199,5 +200,58 @@
 
     .tcm-kanban-column--drop-target {
         @apply border-primary/40 bg-primary/5 ring-2 ring-primary/25;
+    }
+
+    .tcm-calendar-month {
+        @apply overflow-hidden rounded-xl border border-border/70;
+    }
+
+    .tcm-calendar-month-head,
+    .tcm-calendar-month-grid {
+        @apply grid grid-cols-7;
+    }
+
+    .tcm-calendar-weekday {
+        @apply border-b border-border/60 bg-muted/30 px-2 py-2 text-center text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase;
+    }
+
+    .tcm-calendar-day {
+        @apply flex min-h-[7.5rem] flex-col border-b border-r border-border/50 p-2 last:border-r-0;
+    }
+
+    .tcm-calendar-day--muted {
+        @apply bg-muted/15 text-muted-foreground;
+    }
+
+    .tcm-calendar-day--today {
+        @apply bg-primary/5 ring-1 ring-inset ring-primary/20;
+    }
+
+    .tcm-calendar-task {
+        @apply flex items-center gap-1 rounded-md border border-border/60 bg-card px-1.5 py-1 text-[11px] font-medium hover:border-border hover:bg-muted/30;
+    }
+
+    .tcm-calendar-task--compact {
+        @apply px-1 py-0.5;
+    }
+
+    .tcm-calendar-task--done {
+        @apply text-muted-foreground line-through opacity-70;
+    }
+
+    .tcm-calendar-week {
+        @apply grid gap-3 overflow-x-auto pb-1 sm:grid-cols-2 lg:grid-cols-7;
+    }
+
+    .tcm-calendar-week-column {
+        @apply flex min-h-[14rem] flex-col rounded-xl border border-border/70 bg-muted/20;
+    }
+
+    .tcm-calendar-week-column--today {
+        @apply border-primary/30 bg-primary/5 ring-1 ring-primary/15;
+    }
+
+    .tcm-calendar-week-column-head {
+        @apply flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5;
     }
 }

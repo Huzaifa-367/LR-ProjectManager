@@ -14,11 +14,27 @@ class DemoUserSeeder extends Seeder
     {
         $hash = Hash::make(self::PASSWORD);
 
-        $this->seed('TCM Admin', 'admin@gmail.com', 'super_admin', $hash);
-        $this->seed('Platform Admin', 'platform@gmail.com', 'platform_admin', $hash);
+        $this->seedPlatformUser('Admin', 'admin@gmail.com', 'super_admin', $hash);
+        $this->seedPlatformUser('Platform Admin', 'platform@gmail.com', 'platform_admin', $hash);
+
+        $this->seedUser('Huzaifa', 'huzaifa@atomcamp.com', $hash);
+        $this->seedUser('Rafay', 'rafay@atomcamp.com', $hash);
+        $this->seedUser('Naveed', 'naveed@atomcamp.com', $hash);
+        $this->seedUser('Sarmad', 'sarmad@atomcamp.com', $hash);
     }
 
-    private function seed(string $name, string $email, string $role, string $hash): User
+    private function seedPlatformUser(string $name, string $email, string $role, string $hash): User
+    {
+        $user = $this->seedUser($name, $email, $hash);
+
+        if (! $user->hasRole($role)) {
+            $user->syncRoles([$role]);
+        }
+
+        return $user;
+    }
+
+    private function seedUser(string $name, string $email, string $hash): User
     {
         /** @var User $user */
         $user = User::query()->updateOrCreate(
@@ -30,10 +46,6 @@ class DemoUserSeeder extends Seeder
                 'is_active' => true,
             ],
         );
-
-        if (! $user->hasRole($role)) {
-            $user->syncRoles([$role]);
-        }
 
         return $user;
     }

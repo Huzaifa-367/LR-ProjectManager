@@ -76,7 +76,7 @@ final class NotificationDispatcher
             payload: [
                 'task_id' => $task->id,
                 'task_title' => $task->title,
-                'deadline_date' => $task->deadline_date->format('Y-m-d'),
+                'deadline_date' => $task->deadline_date->toIso8601String(),
                 'project_name' => $task->project?->name,
             ],
             databaseNotification: new TaskDueSoonNotification($task),

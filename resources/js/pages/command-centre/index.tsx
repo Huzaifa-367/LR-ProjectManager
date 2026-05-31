@@ -9,6 +9,7 @@ import { FilterPill } from '@/components/command-centre/filter-pill';
 import { PageShell } from '@/components/command-centre/page-shell';
 import { StatusPill } from '@/components/command-centre/status-pill';
 import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
+import { TaskMetaLine } from '@/components/command-centre/task-deadline-label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
@@ -134,12 +135,22 @@ export default function CommandCentreIndex(props: CommandCentrePageProps) {
                                                 >
                                                     {pin.task.title}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {pin.task.project_name}
-                                                    {pin.is_auto
-                                                        ? ' · auto'
-                                                        : ''}
-                                                </p>
+                                                <TaskMetaLine
+                                                    projectName={
+                                                        pin.task.project_name
+                                                    }
+                                                    deadlineDate={
+                                                        pin.task.deadline_date
+                                                    }
+                                                    deadlineUi={
+                                                        pin.task.deadline_ui
+                                                    }
+                                                    suffix={
+                                                        pin.is_auto
+                                                            ? 'auto'
+                                                            : null
+                                                    }
+                                                />
                                             </div>
                                             <div className="flex shrink-0 gap-1">
                                                 {canOrg(
@@ -202,9 +213,32 @@ export default function CommandCentreIndex(props: CommandCentrePageProps) {
                                     {reminders.map((reminder) => (
                                         <li
                                             key={reminder.id}
-                                            className="tcm-list-row text-sm"
+                                            className="tcm-list-row"
                                         >
-                                            {reminder.title}
+                                            <div className="min-w-0 flex-1">
+                                                <Link
+                                                    href={TaskController.show.url(
+                                                        [
+                                                            organization.id,
+                                                            reminder.id,
+                                                        ],
+                                                    )}
+                                                    className="text-sm font-medium hover:text-primary hover:underline"
+                                                >
+                                                    {reminder.title}
+                                                </Link>
+                                                <TaskMetaLine
+                                                    projectName={
+                                                        reminder.project_name
+                                                    }
+                                                    deadlineDate={
+                                                        reminder.deadline_date
+                                                    }
+                                                    deadlineUi={
+                                                        reminder.deadline_ui
+                                                    }
+                                                />
+                                            </div>
                                         </li>
                                     ))}
                                 </ul>
@@ -399,9 +433,11 @@ function TaskRow({
                         {task.title}
                     </Link>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                    {task.project_name}
-                </p>
+                <TaskMetaLine
+                    projectName={task.project_name}
+                    deadlineDate={task.deadline_date}
+                    deadlineUi={task.deadline_ui}
+                />
             </div>
             <StatusPill status={task.status} />
             {canOrg(permissions, 'org.tasks.toggle-done') && !task.is_done && (

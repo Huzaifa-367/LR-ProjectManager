@@ -67,7 +67,7 @@ final class TaskCsvExporter
                     $task->title,
                     $task->status->value,
                     $task->priority?->value,
-                    $task->deadline_date?->format('Y-m-d'),
+                    $task->deadline_date?->format('Y-m-d H:i:s'),
                     $task->is_done ? '1' : '0',
                     $task->assignees->pluck('display_name')->filter()->implode('; '),
                     $task->created_at?->toIso8601String(),

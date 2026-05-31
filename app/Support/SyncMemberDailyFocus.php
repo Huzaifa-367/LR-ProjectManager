@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\DeadlineType;
 use App\Enums\TaskKind;
 use App\Models\MemberDailyFocus;
 use App\Models\Task;
@@ -18,7 +17,10 @@ final class SyncMemberDailyFocus
 
         $focusDate ??= now()->startOfDay();
 
-        if ($task->is_done || $task->deadline_type !== DeadlineType::Today) {
+        $isDueToday = $task->deadline_date !== null
+            && $task->deadline_date->isSameDay($focusDate);
+
+        if ($task->is_done || ! $isDueToday) {
             MemberDailyFocus::query()
                 ->where('task_id', $task->id)
                 ->where('is_auto', true)

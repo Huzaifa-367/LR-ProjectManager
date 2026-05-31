@@ -65,11 +65,33 @@ export function buildOrganizationSettingsNav(
         },
     ];
 
+    const generalHref = OrganizationController.show.url(organizationId);
+
     return items
         .filter((item) => item.visible)
         .map(({ label, href }) => ({
             label,
             href,
-            active: href === activeHref,
+            active: isOrganizationSettingsNavActive(
+                href,
+                activeHref,
+                generalHref,
+            ),
         }));
+}
+
+function isOrganizationSettingsNavActive(
+    itemHref: string,
+    activeHref: string,
+    generalHref: string,
+): boolean {
+    if (activeHref === itemHref) {
+        return true;
+    }
+
+    if (itemHref === generalHref) {
+        return false;
+    }
+
+    return activeHref.startsWith(`${itemHref}/`);
 }

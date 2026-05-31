@@ -25,7 +25,7 @@ type ProposalTask = {
     description?: string | null;
     priority?: string | null;
     status?: string | null;
-    deadline_type?: string | null;
+    deadline_date?: string | null;
 };
 
 type ProposalTeamMember = {
@@ -215,7 +215,7 @@ export default function ReviewProposal({
                                     title={task.title}
                                     description={task.description}
                                     priority={task.priority}
-                                    deadlineType={task.deadline_type}
+                                    deadlineDate={task.deadline_date}
                                 />
                             ))}
                             {decisions.map((decision, index) => (

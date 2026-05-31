@@ -17,6 +17,7 @@ use App\Support\MemberNotificationPreferenceSeeder;
 use App\Support\OrganizationMemberLinker;
 use App\Support\OrganizationMemberResolver;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -159,7 +160,33 @@ class OrganizationMemberController extends Controller
         abort_unless($permissions->memberCan($actor, 'org.members.update'), 403);
         abort_unless($organizationMember->organization_id === $organization->id, 404);
 
-        $organizationMember->update($request->validated());
+        $validated = $request->validated();
+        $linker = app(OrganizationMemberLinker::class);
+
+        if (array_key_exists('email', $validated)) {
+            $email = $linker->normalizeEmail($validated['email']);
+            $validated['email'] = $email;
+
+            $resolvedUserId = $linker->resolveUserId(null, $email);
+
+            if ($resolvedUserId !== null) {
+                $conflict = OrganizationMember::query()
+                    ->where('organization_id', $organization->id)
+                    ->where('user_id', $resolvedUserId)
+                    ->where('id', '!=', $organizationMember->id)
+                    ->exists();
+
+                if ($conflict) {
+                    throw ValidationException::withMessages([
+                        'email' => __('This user is already a member of the organization.'),
+                    ]);
+                }
+
+                $validated['user_id'] = $resolvedUserId;
+            }
+        }
+
+        $organizationMember->update($validated);
 
         app(ActivityLogger::class)->logForAuthenticatedUser(
             $organizationMember,

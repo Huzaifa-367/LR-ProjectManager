@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\DeadlineType;
 use App\Models\AiOnboardingProposal;
 use App\Models\AiSession;
 use App\Models\Attachment;
@@ -49,8 +48,7 @@ final class CommandCentreResourcePresenter
             'description' => $task->description,
             'priority' => $task->priority?->value,
             'status' => $task->status->value,
-            'deadline_type' => $task->deadline_type?->value,
-            'deadline_date' => $task->deadline_date?->toDateString(),
+            'deadline_date' => $task->deadline_date?->toIso8601String(),
             'external_link' => $task->external_link,
             'is_done' => $task->is_done,
             'created_by_member_id' => $task->created_by_member_id,
@@ -104,9 +102,7 @@ final class CommandCentreResourcePresenter
             'description' => $task->description,
             'priority' => $task->priority?->value,
             'status' => $task->status->value,
-            'deadline_type' => $task->deadline_type?->value,
-            'deadline_date' => $task->deadline_date?->toDateString(),
-            'deadline_label' => $task->deadline_label,
+            'deadline_date' => $task->deadline_date?->toIso8601String(),
             'external_link' => $task->external_link,
             'is_done' => $task->is_done,
             'meta' => $task->meta,
@@ -245,22 +241,22 @@ final class CommandCentreResourcePresenter
 
     private static function deadlineUi(Task $task): string
     {
-        if ($task->deadline_type === DeadlineType::Today) {
-            return 'soon';
-        }
-
         if ($task->deadline_date === null) {
             return 'normal';
         }
 
-        $deadline = Carbon::parse($task->deadline_date)->startOfDay();
-        $today = now()->startOfDay();
+        $deadline = Carbon::parse($task->deadline_date);
+        $now = now();
 
-        if ($deadline->lt($today)) {
+        if ($deadline->isPast()) {
             return 'overdue';
         }
 
-        if ($deadline->lte($today->copy()->addDays(7))) {
+        if ($deadline->isToday()) {
+            return 'soon';
+        }
+
+        if ($deadline->lte($now->copy()->addDays(7)->endOfDay())) {
             return 'week';
         }
 

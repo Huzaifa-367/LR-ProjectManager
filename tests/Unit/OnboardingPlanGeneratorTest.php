@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Support\OnboardingPlanGenerator;
 use App\Support\OnboardingPlanGenerationException;
+use App\Support\OnboardingPlanGenerator;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -21,13 +21,13 @@ class OnboardingPlanGeneratorTest extends TestCase
                     'title' => 'Establish authentication and organization foundation',
                     'description' => 'Objective: Ship org-aware auth flows.',
                     'priority' => 'high',
-                    'deadline_type' => 'none',
+                    'deadline_date' => null,
                 ],
                 [
                     'title' => 'Implement unified work management',
                     'description' => 'Objective: Deliver tasks, decisions, and reminders.',
                     'priority' => 'high',
-                    'deadline_type' => 'none',
+                    'deadline_date' => null,
                 ],
             ],
             'decisions' => [

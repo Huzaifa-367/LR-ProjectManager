@@ -1,6 +1,7 @@
 import { ExpandableText } from '@/components/command-centre/expandable-text';
 import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
 import { Badge } from '@/components/ui/badge';
+import { formatDueDateLabel } from '@/lib/task-options';
 import { cn } from '@/lib/utils';
 
 type OnboardingPlanItemKind = 'task' | 'decision' | 'reminder';
@@ -10,12 +11,12 @@ type OnboardingPlanItemProps = {
     title: string;
     description?: string | null;
     priority?: string | null;
-    deadlineType?: string | null;
+    deadlineDate?: string | null;
     className?: string;
 };
 
 function formatLabel(value?: string | null): string | null {
-    if (!value || value === 'none') {
+    if (!value) {
         return null;
     }
 
@@ -27,11 +28,11 @@ export function OnboardingPlanItem({
     title,
     description,
     priority,
-    deadlineType,
+    deadlineDate,
     className,
 }: OnboardingPlanItemProps) {
     const priorityLabel = formatLabel(priority);
-    const deadlineLabel = formatLabel(deadlineType);
+    const dueLabel = formatDueDateLabel(deadlineDate);
 
     return (
         <li className={cn('space-y-2 py-3 first:pt-0 last:pb-0', className)}>
@@ -41,7 +42,7 @@ export function OnboardingPlanItem({
                     {title}
                 </p>
             </div>
-            {(priorityLabel || deadlineLabel) && (
+            {(priorityLabel || dueLabel) && (
                 <div className="flex flex-wrap gap-1.5 pl-0.5">
                     {priorityLabel && (
                         <Badge
@@ -51,9 +52,9 @@ export function OnboardingPlanItem({
                             {priorityLabel}
                         </Badge>
                     )}
-                    {deadlineLabel && (
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                            {deadlineLabel}
+                    {dueLabel && (
+                        <Badge variant="outline" className="text-[10px]">
+                            Due {dueLabel}
                         </Badge>
                     )}
                 </div>

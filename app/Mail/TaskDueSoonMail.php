@@ -33,7 +33,7 @@ class TaskDueSoonMail extends Mailable
             with: [
                 'taskTitle' => $this->task->title,
                 'projectName' => $this->task->project?->name,
-                'deadlineDate' => $this->task->deadline_date?->format('M j, Y'),
+                'deadlineDate' => $this->task->deadline_date?->format('M j, Y g:i A'),
                 'actionUrl' => route('organizations.tasks.show', [$this->task->organization, $this->task]),
             ],
         );

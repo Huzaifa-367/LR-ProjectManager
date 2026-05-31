@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\CommandCentre;
 
-use App\Enums\DeadlineType;
 use App\Enums\PriorityLevel;
 use App\Enums\TaskKind;
 use App\Enums\TaskStatus;
@@ -44,8 +43,7 @@ class StoreTaskRequest extends FormRequest
             'assignee_member_ids.*' => ['integer', 'exists:organization_members,id'],
             'priority' => ['nullable', Rule::enum(PriorityLevel::class)],
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
-            'deadline_type' => ['nullable', Rule::enum(DeadlineType::class)],
-            'deadline_date' => ['required_if:deadline_type,date', 'nullable', 'date'],
+            'deadline_date' => ['nullable', 'date'],
             'external_link' => ['nullable', 'url', 'max:2048'],
             'meta' => ['nullable', 'array'],
         ];

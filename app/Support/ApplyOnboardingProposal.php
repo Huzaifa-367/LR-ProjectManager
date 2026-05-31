@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Enums\AiSessionStatus;
-use App\Enums\DeadlineType;
 use App\Enums\OnboardingProposalStatus;
 use App\Enums\PriorityLevel;
 use App\Enums\TaskKind;
@@ -96,9 +95,6 @@ final class ApplyOnboardingProposal
                 'status' => isset($draft['status'])
                     ? TaskStatus::tryFrom((string) $draft['status']) ?? TaskStatus::Pending
                     : TaskStatus::Pending,
-                'deadline_type' => isset($draft['deadline_type'])
-                    ? DeadlineType::tryFrom((string) $draft['deadline_type'])
-                    : null,
                 'deadline_date' => $draft['deadline_date'] ?? null,
                 'meta' => $draft['meta'] ?? null,
                 'sort_order' => $draft['sort_order'] ?? 0,

@@ -16,9 +16,7 @@ export type CommandCentreTask = {
     description: string | null;
     priority: string | null;
     status: string;
-    deadline_type: string | null;
     deadline_date: string | null;
-    deadline_label: string | null;
     external_link: string | null;
     is_done: boolean;
     meta: Record<string, unknown> | null;

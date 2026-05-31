@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\DeadlineType;
 use App\Enums\PriorityLevel;
 use App\Enums\TaskKind;
 use App\Enums\TaskStatus;
@@ -30,9 +29,7 @@ class Task extends Model
         'created_by_member_id',
         'priority',
         'status',
-        'deadline_type',
         'deadline_date',
-        'deadline_label',
         'external_link',
         'is_done',
         'completed_at',
@@ -50,8 +47,7 @@ class Task extends Model
             'kind' => TaskKind::class,
             'priority' => PriorityLevel::class,
             'status' => TaskStatus::class,
-            'deadline_type' => DeadlineType::class,
-            'deadline_date' => 'date',
+            'deadline_date' => 'datetime',
             'is_done' => 'boolean',
             'completed_at' => 'datetime',
             'meta' => 'array',

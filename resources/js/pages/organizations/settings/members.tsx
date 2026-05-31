@@ -2,9 +2,11 @@ import OrganizationController from '@/actions/App/Http/Controllers/OrganizationC
 import OrganizationInvitationController from '@/actions/App/Http/Controllers/OrganizationInvitationController';
 import OrganizationMemberController from '@/actions/App/Http/Controllers/OrganizationMemberController';
 import { Head, router } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { AddMemberDialog } from '@/components/command-centre/add-member-dialog';
 import { CommandCard } from '@/components/command-centre/command-card';
+import { EditMemberDialog } from '@/components/command-centre/edit-member-dialog';
 import { EmptyState } from '@/components/command-centre/empty-state';
 import { InviteMemberDialog } from '@/components/command-centre/invite-member-dialog';
 import { SettingsShell } from '@/components/command-centre/settings-shell';
@@ -55,6 +57,7 @@ export default function OrganizationMembersSettings({
     permissions,
 }: OrganizationMembersProps) {
     const canStore = canOrg(permissions.org, 'org.members.store');
+    const canUpdate = canOrg(permissions.org, 'org.members.update');
     const canInvite = canOrg(permissions.org, 'org.invitations.store');
     const canRevokeInvite = canOrg(permissions.org, 'org.invitations.destroy');
     const canResendInvite = canOrg(permissions.org, 'org.invitations.resend');
@@ -87,6 +90,7 @@ export default function OrganizationMembersSettings({
                         {canStore && defaultRoleId !== undefined && (
                             <AddMemberDialog
                                 organizationId={organization.id}
+                                roles={roles}
                                 defaultRoleId={defaultRoleId}
                             />
                         )}
@@ -230,6 +234,25 @@ export default function OrganizationMembersSettings({
                                         >
                                             {member.status}
                                         </Badge>
+                                        {canUpdate && (
+                                            <EditMemberDialog
+                                                organizationId={
+                                                    organization.id
+                                                }
+                                                member={member}
+                                                roles={roles}
+                                                trigger={
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        data-test={`edit-member-${member.id}`}
+                                                    >
+                                                        <Pencil className="size-4" />
+                                                        Edit
+                                                    </Button>
+                                                }
+                                            />
+                                        )}
                                         {canDisable &&
                                             member.status === 'active' && (
                                                 <Button

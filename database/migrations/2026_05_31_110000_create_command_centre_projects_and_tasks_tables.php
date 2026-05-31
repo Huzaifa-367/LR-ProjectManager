@@ -67,9 +67,7 @@ return new class extends Migration
             $table->foreignId('created_by_member_id')->constrained('organization_members')->cascadeOnDelete();
             $table->string('priority', 20)->nullable();
             $table->string('status', 20)->default('pending');
-            $table->string('deadline_type', 20)->nullable();
-            $table->date('deadline_date')->nullable();
-            $table->string('deadline_label', 100)->nullable();
+            $table->dateTime('deadline_date')->nullable();
             $table->string('external_link', 2048)->nullable();
             $table->boolean('is_done')->default(false);
             $table->timestamp('completed_at')->nullable();

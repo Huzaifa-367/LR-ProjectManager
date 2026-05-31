@@ -21,7 +21,7 @@ import type {
     OrganizationSummary,
 } from '@/types/organization';
 import { cn } from '@/lib/utils';
-import { formatTaskKind } from '@/lib/task-options';
+import { formatDueDateLabel, formatTaskKind } from '@/lib/task-options';
 
 type TaskDetail = {
     id: number;
@@ -32,6 +32,7 @@ type TaskDetail = {
     description: string | null;
     status: string;
     priority: string | null;
+    deadline_date: string | null;
     external_link?: string | null;
     is_done: boolean;
     assignees: Array<{
@@ -130,6 +131,8 @@ export default function TaskShow({
                             <EditTaskDialog
                                 organizationId={organization.id}
                                 task={task}
+                                canSyncAssignees={canSyncAssignees}
+                                teamMembers={teamOptions}
                             />
                         )}
                         {task.project_id > 0 && (
@@ -170,6 +173,16 @@ export default function TaskShow({
                                         Priority:{' '}
                                         <span className="font-medium capitalize text-foreground">
                                             {task.priority}
+                                        </span>
+                                    </p>
+                                )}
+                                {formatDueDateLabel(task.deadline_date) && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Due:{' '}
+                                        <span className="font-medium text-foreground">
+                                            {formatDueDateLabel(
+                                                task.deadline_date,
+                                            )}
                                         </span>
                                     </p>
                                 )}
