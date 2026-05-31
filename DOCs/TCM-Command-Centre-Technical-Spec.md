@@ -1,7 +1,7 @@
 # TCM Command Centre — Technical Specification
 
 **Document purpose:** Technical design for a multi-user project management / executive command centre, derived from the `TCM Group Dashboard.html` prototype.  
-**Status:** Draft v5 — RBAC + production platform + AI project onboarding  
+**Status:** Draft v5 — validated 2026-05-31 (tables, params, permissions cross-check)  
 **Stack target:** Laravel 11+, Fortify, Inertia.js + React 19, custom org/project RBAC (Spatie-compatible permission slugs), Tailwind v4  
 **Source artifact:** `TCM Group Dashboard.html` (root of repository)
 
@@ -36,6 +36,7 @@
 25. [Appendix C — Role Templates & Examples](#appendix-c--role-templates--examples)
 26. [Appendix D — Full Route → Permission Matrix](#appendix-d--full-route--permission-matrix)
 27. [Appendix E — Production Tables Reference](#appendix-e--production-tables-reference)
+28. [Appendix F — Document Validation Audit](#appendix-f--document-validation-audit)
 
 ---
 
@@ -91,7 +92,7 @@ The TCM Group Dashboard is a single-page **Command Centre** for executive leader
 
 ## 2. Domain Flow & Hierarchy
 
-### 4.1 Entity hierarchy
+### 2.1 Entity hierarchy
 
 ```
  User (account)
@@ -111,7 +112,7 @@ The TCM Group Dashboard is a single-page **Command Centre** for executive leader
                 └── assignees → task_assignees → OrganizationMember (many)
 ```
 
-### 4.2 Request flow (read task list)
+### 2.2 Request flow (read task list)
 
 ```mermaid
 sequenceDiagram
@@ -130,7 +131,7 @@ sequenceDiagram
     C-->>U: Inertia props
 ```
 
-### 4.3 Who can see what (summary)
+### 2.3 Who can see what (summary)
 
 | Resource | `*.scope.all` permission | `*.scope.own` / `*.scope.member` (default for members) |
 |----------|----------------------|---------------------------------------------|
@@ -231,8 +232,8 @@ Org **Owner** role gets all org permissions. Project **Lead** role gets all proj
 |------|--------|
 | Storage | `task_assignees(task_id, organization_member_id)` — many rows per task |
 | UI | Person column shows multiple names/chips; multi-select from project team or org roster |
-| Project tasks | Assignees should be members of that project’s team (`project_members`) — validated in Form Request |
-| Org-level tasks | Assignees can be any active `organization_members` |
+| Project tasks | Assignees must be on that project’s `project_members` — validated in Form Request |
+| Assignee roster | Assignees must be active `organization_members` of the same org |
 | Visibility (`org.tasks.scope.own`) | Member sees task if **they appear in `task_assignees`** or they created it |
 | Assigned-to-me panel | Tasks where current member has a row in `task_assignees` |
 | Auto daily focus | Creates focus pin for **each** assignee when deadline is today (configurable) |
@@ -259,16 +260,72 @@ Follow-up auto-reminder = create `tasks` row with `kind=reminder`, `meta.source_
 
 ### 4.1 UI layout
 
+**Production shell** reuses the existing app layout (`AppSidebarLayout`, shadcn `Sidebar` with `collapsible="icon"` + `variant="inset"`) — same pattern as the current LR-POS / SiteGuard shell. The prototype’s single topbar is split into a **persistent sidebar** + **content header bar** + **command centre body**.
+
+#### App shell (sidebar + content header)
+
+```
+┌──────────────┬──────────────────────────────────────────────────────────────┐
+│ SIDEBAR      │ CONTENT HEADER (AppSidebarHeader)                            │
+│ (existing)   │ ┌──────────────────────────────────────────────────────────┐ │
+│              │ │ [≡] SidebarTrigger │ OrganizationSelector │ … │ NavUser  │ │
+│ ┌──────────┐ │ └──────────────────────────────────────────────────────────┘ │
+│ │ AppLogo  │ │   ↑ left cluster (same row)              ↑ right cluster   │
+│ │ + link   │ ├──────────────────────────────────────────────────────────────┤
+│ └──────────┘ │ MAIN CONTENT (page body)                                     │
+│              │                                                              │
+│ NavMain      │  Command centre / org settings / project pages               │
+│ · Command    │                                                              │
+│   Centre     │                                                              │
+│ · Projects   │                                                              │
+│ · Tasks      │                                                              │
+│ · Settings   │                                                              │
+│   (org)      │                                                              │
+│              │                                                              │
+│ (no user     │                                                              │
+│  footer)     │                                                              │
+└──────────────┴──────────────────────────────────────────────────────────────┘
+```
+
+**Content header row (`AppSidebarHeader`) — component layout**
+
+| Zone | Component | Behaviour |
+|------|-----------|-----------|
+| **Left (same row as toggle)** | `SidebarTrigger` | Collapse/expand sidebar (icon ↔ full width) |
+| **Left (same row, after toggle)** | `OrganizationSelector` | Replaces `SiteSelector`; lists orgs from `organizationContext.organizations`; `POST organizations.select` |
+| **Centre (optional)** | `Breadcrumbs` | Page trail; hidden on command centre if redundant |
+| **Right** | `NavUser` | Profile avatar + name + dropdown (`UserMenuContent`: settings, logout) — **moved from `SidebarFooter`** |
+
+Flex rule: `flex items-center justify-between gap-2` — left cluster `SidebarTrigger` + `OrganizationSelector` stay grouped; `NavUser` aligned end. On mobile, org selector may shrink (`min-w-0`, truncate label).
+
+**Sidebar (`AppSidebar`) — unchanged structure**
+
+| Area | Content |
+|------|---------|
+| `SidebarHeader` | `AppLogo` + link to command centre (selected org) |
+| `SidebarContent` | `NavMain` sections gated by org/project permissions |
+| `SidebarFooter` | *(empty — user menu relocated to content header)* |
+
+**Organization selector states**
+
+| State | UI |
+|-------|-----|
+| One org | Show org name; switcher still clickable → org home |
+| Multiple orgs | Dropdown / select with Owner · Member badge |
+| Pending invite | Badge on org row; link to accept flow |
+| No org selected | Redirect to `/organizations` (org home) before tenant pages |
+
+#### Command centre body (prototype parity — inside main content)
+
+Maps the prototype dashboard below the content header (no duplicate topbar):
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ TOPBAR: Logo · TCM Group · Role label · Date · User · Theme     │
-├─────────────────────────────────────────────────────────────────┤
-│ HEADER: Greeting + KPIs (Priorities · Open Tasks · Projects · Done) │
+│ PAGE HEADER: Greeting + KPIs (Priorities · Open · Projects · Done) │
 ├──────────────────┬──────────────────────────────────────────────┤
 │ LEFT COLUMN      │ RIGHT COLUMN                                  │
-│ · Assigned (Nawal│ · Full Task List (filters: company, person)  │
-│   only)          │ · Strategic Projects (3-col grid)             │
-│ · Today's        │                                               │
+│ · Assigned to me │ · Full Task List (filters: project, person)  │
+│ · Today's        │ · Strategic Projects (3-col grid)             │
 │   Priorities     │                                               │
 │ · Reminders      │                                               │
 │ · CEO Notes      │                                               │
@@ -276,6 +333,34 @@ Follow-up auto-reminder = create `tasks` row with `kind=reminder`, `meta.source_
 │ BOTTOM BAR: open · done today · projects · saved indicator      │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Removed from prototype topbar (relocated)**
+
+| Prototype topbar item | Production location |
+|-----------------------|---------------------|
+| Logo | `SidebarHeader` → `AppLogo` |
+| TCM Group / company | `OrganizationSelector` in `AppSidebarHeader` |
+| User | `NavUser` in `AppSidebarHeader` (right) |
+| Theme | `UserMenuContent` or settings (unchanged pattern) |
+| Role label | Shown in org selector subtitle or command centre greeting |
+| Date | Command centre page header / KPI row |
+
+**React files (extend existing — do not add parallel layout)**
+
+| File | Change |
+|------|--------|
+| `resources/js/layouts/app/app-sidebar-layout.tsx` | No structural change |
+| `resources/js/components/app-sidebar-header.tsx` | Add `OrganizationSelector` left of breadcrumbs; add `NavUser` right; remove standalone right-only site selector pattern |
+| `resources/js/components/organization-selector.tsx` | **New** — mirror `site-selector.tsx` using `organizationContext` + `organizations.select` |
+| `resources/js/components/app-sidebar.tsx` | Remove `NavUser` from `SidebarFooter` |
+| `resources/js/components/nav-user.tsx` | Optional variant `layout="header"` for non-sidebar trigger styling in header bar |
+| `resources/js/hooks/use-organization-context.tsx` | **New** — mirror `use-site-context.tsx` |
+
+Shared Inertia prop: `organizationContext` (§6.2) — same shape consumed by header components.
+
+#### Prototype reference (original single-page layout)
+
+The HTML prototype used one combined topbar (`Logo · TCM Group · Role · Date · User · Theme`). Production splits chrome across sidebar + content header as above; **main column content** preserves prototype sections.
 
 ### 4.2 Functional modules
 
@@ -570,7 +655,7 @@ Role definitions live in code (`CommandCentreRoleTemplateRegistry`) — **not** 
 | `admin` | Operations admin | All org slugs except `org.organizations.destroy` |
 | `lead` | Department head | `org.tasks.scope.all`, `org.projects.scope.all`, member/role management slugs (§11.9) |
 | `member` | Individual contributor | `org.tasks.scope.own`, `org.projects.scope.member`, task/focus/note route slugs |
-| `viewer` | Read-only executive | Index/show slugs + `org.tasks.scope.all`, no store/update/destroy |
+| `viewer` | Read-only executive | Index/show slugs + `org.tasks.scope.own`, `org.projects.scope.member`; no store/update/destroy |
 
 Organizations can **rename**, **duplicate**, or **create custom roles** with any subset of permissions from the catalog (§11). System role **slugs** remain immutable; permission rows are editable.
 
@@ -593,7 +678,8 @@ Each project stores its **own** `project_roles` rows (materialized from template
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ React / Inertia — command-centre, org settings, project view │
+│ React / Inertia — AppSidebarLayout + command-centre pages   │
+│ Sidebar (NavMain) + header (toggle · org · profile)         │
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
@@ -603,7 +689,7 @@ Each project stores its **own** `project_roles` rows (materialized from template
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
-│ MySQL / PostgreSQL — 13 tables, org_id on all tenant data    │
+│ MySQL / PostgreSQL — 29 Command Centre tables, org_id on all tenant data │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -1360,7 +1446,9 @@ enum OnboardingProposalStatus: string { case Draft = 'draft'; case PendingReview
     "daily_digest_enabled": true,
     "daily_digest_time": "07:00",
     "daily_digest_days": ["mon", "tue", "wed", "thu", "fri"]
-  }
+  },
+  "ai_enabled": true,
+  "ai_assign_pending_invites": false
 }
 ```
 
@@ -1637,7 +1725,7 @@ Roles are **fully dynamic**: each org and each project defines custom roles; per
 {layer}.{resource}.{action}[.{qualifier}]
 
 layer     = org | project
-resource  = organizations | members | roles | projects | tasks | reminders | decisions | focus | notes | command-centre | invitations | mail-profiles | notifications | notification-preferences | notification-deliveries | activity-logs | task-comments | attachments | exports | integrations | webhooks
+resource  = organizations | members | roles | projects | tasks | reminders | decisions | focus | notes | command-centre | invitations | mail-profiles | notifications | notification-preferences | notification-deliveries | activity-logs | task-comments | attachments | exports | integrations | webhooks | ai-sessions | ai-onboarding | ai-assist
 action    = index | show | store | update | destroy | archive | sync | reorder | toggle-done | status.update | assignees.sync | permissions.sync
 qualifier = scope.all | scope.own | scope.member   (data scope only — not tied to HTTP verb)
 ```
@@ -2290,6 +2378,28 @@ Generated route helpers from named routes above. UI gates actions with `canOrg(p
 
 ## 14. Request Validation
 
+### `StoreOrganizationRequest`
+
+```php
+[
+    'name' => ['required', 'string', 'max:255'],
+    'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', 'unique:organizations,slug'],
+    'settings.timezone' => ['nullable', 'timezone'],
+    'settings.focus_cap' => ['nullable', 'integer', 'min:1', 'max:10'],
+    'settings.ai_enabled' => ['nullable', 'boolean'],
+]
+// On pass → OrganizationBootstrapService (§10.5); no permission slug required (auth only)
+```
+
+### `UpdateOrganizationContextRequest` (org switcher)
+
+```php
+[
+    'organization_id' => ['required', 'integer', 'exists:organizations,id'],
+]
+// Custom rule: user has organization_members.status = active for organization_id
+```
+
 ### `StoreTaskRequest`
 
 ```php
@@ -2378,11 +2488,30 @@ Project roles:
 
 ## 15. Frontend Mapping
 
-Unchanged from prototype layout. Key mapping updates:
+### 15.1 App shell (sidebar + content header)
+
+Reuse **`AppSidebarLayout`** — do not introduce a new top-level layout. Global chrome:
+
+| UI element | Component | Placement |
+|------------|-----------|-----------|
+| Sidebar nav | `AppSidebar` + `NavMain` | Left; permission-gated links |
+| Collapse toggle | `SidebarTrigger` | `AppSidebarHeader` — **first item, left** |
+| Organization switch | `OrganizationSelector` | `AppSidebarHeader` — **same row, immediately after toggle** |
+| Profile / account menu | `NavUser` | `AppSidebarHeader` — **right** (moved out of `SidebarFooter`) |
+| Breadcrumbs | `Breadcrumbs` | `AppSidebarHeader` — between org selector and profile (optional) |
+
+Reference implementation today: `app-sidebar-header.tsx` has `SidebarTrigger` + breadcrumbs left and `SiteSelector` right — Command Centre replaces `SiteSelector` → `OrganizationSelector` and adds `NavUser` to the header row.
+
+### 15.2 Prototype → production content mapping
+
+Key mapping updates:
 
 | Prototype | Production |
 |-----------|------------|
-| User switcher | Org switcher + real auth user |
+| Topbar logo | `SidebarHeader` → `AppLogo` |
+| Topbar “TCM Group” / company | `OrganizationSelector` in content header (same row as sidebar toggle) |
+| Topbar user menu | `NavUser` in content header (profile image + dropdown) |
+| User switcher | Org membership via `OrganizationSelector` + `/organizations` home |
 | `#people-modal` | Org settings → Members |
 | Project filter chips | One chip per project (`?project_id=`); replaces prototype company filters |
 | Person column | Multi-select → `task_assignees` |
@@ -2658,6 +2787,10 @@ app/
 │   │       ├── AiSessionController.php
 │   │       ├── AiOnboardingController.php
 │   │       └── ProjectOnboardingController.php
+│   └── Components/
+│       ├── app-sidebar-header.tsx      # SidebarTrigger + OrganizationSelector + NavUser
+│       ├── organization-selector.tsx   # replaces SiteSelector for Command Centre
+│       └── nav-user.tsx                # header variant (no longer in SidebarFooter)
 │   └── Middleware/
 │       ├── EnsureOrganizationAccess.php
 │       ├── EnsureOrganizationMember.php
@@ -3209,6 +3342,7 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `org.mail-profiles.update` | PATCH | `organizations.mail-profiles.update` |
 | `org.mail-profiles.destroy` | DELETE | `organizations.mail-profiles.destroy` |
 | `org.mail-profiles.test` | POST | `organizations.mail-profiles.test` |
+| `org.mail-profiles.oauth.callback` | GET | `organizations.mail-profiles.oauth.callback` |
 | `org.notifications.index` | GET | `organizations.notifications.index` |
 | `org.notifications.mark-read` | PATCH | `organizations.notifications.mark-read` |
 | `org.notification-preferences.show` | GET | `organizations.notification-preferences.show` |
@@ -3223,8 +3357,8 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `org.attachments.destroy` | DELETE | `organizations.attachments.destroy` |
 | `org.exports.store` | POST | `organizations.exports.store` |
 | `org.exports.show` | GET | `organizations.exports.show` |
-| `org.integrations.*` | * | Phase 4 — see §11.3 |
-| `org.webhooks.*` | * | Phase 4 — see §11.3 |
+| `org.integrations.*` | * | Phase 4 — `org.integrations.index`, `.store`, `.destroy` (§11.3) |
+| `org.webhooks.*` | * | Phase 4 — `org.webhooks.index`, `.store`, `.update`, `.destroy` (§11.3) |
 | `org.ai-sessions.index` | GET | `organizations.ai-sessions.index` |
 | `org.ai-sessions.store` | POST | `organizations.ai-sessions.store` |
 | `org.ai-sessions.show` | GET | `organizations.ai-sessions.show` |
@@ -3237,7 +3371,7 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `org.ai-onboarding.apply` | POST | `organizations.ai-onboarding.apply` |
 | `org.ai-assist.store` | POST | `organizations.ai-sessions.messages` |
 
-### Project scope (28 route + 2 scope slugs)
+### Project scope (30 route + 2 scope slugs)
 
 | Permission slug | HTTP | Route name |
 |-----------------|------|------------|
@@ -3274,7 +3408,7 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `project.ai-assist.store` | POST | `projects.ai-assist.messages` |
 | `project.ai-onboarding.propose` | POST | `projects.ai-onboarding.propose` |
 
-**Total catalog:** ~89 org slugs + ~32 project slugs (see §11.3; Phase 4 integration slugs optional).
+**Total catalog:** **87 org slugs** (76 route + 4 scope + 7 Phase 4) + **32 project slugs** (30 route + 2 scope) = **119 assignable permissions**. Auth-only routes (`organizations.index`, `create`, `store`, `select`) and public invite accept have no slug.
 
 ---
 
@@ -3322,6 +3456,104 @@ Quick reference — authoritative detail in §11.4–11.5.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Gmail OAuth for org mail profiles |
 | `QUEUE_CONNECTION=redis` | Production queue driver |
 | `FILESYSTEM_DISK=s3` | Attachment storage (production) |
+
+---
+
+## Appendix F — Document Validation Audit
+
+**Audit date:** 2026-05-31  
+**Scope:** Table inventory, column params, permission slugs, route matrix, cross-references.
+
+### F.1 Table inventory — PASS
+
+| Check | Result |
+|-------|--------|
+| §3.1 lists 29 Command Centre tables | ✓ |
+| §8.1–§8.13 core + §8.14–§8.25 production + §8.26–§8.29 AI | ✓ 29 definitions |
+| Inventory names match §8 section titles | ✓ |
+| `task_assignees` counted as pivot in §3.1 note | ✓ (13 core + pivot) |
+| Framework tables documented separately | ✓ |
+
+### F.2 Core table params — verified
+
+| Table | Required FKs / constraints | Notes |
+|-------|---------------------------|-------|
+| `organizations` | `owner_user_id` → users | `settings` JSON schema in §9 |
+| `organization_members` | `organization_id`, `organization_role_id`; `user_id` nullable | UNIQUE `(organization_id, user_id)` when user_id set |
+| `tasks` | `organization_id`, **`project_id` NOT NULL** | Soft delete; `kind` enum |
+| `task_assignees` | PK `(task_id, organization_member_id)` | Assignees validated against `project_members` |
+| `member_daily_focus` | `task_id` must be `kind=task` | UNIQUE `(member, task, focus_date)`; cap from org settings |
+| `project_members` | UNIQUE `(project_id, organization_member_id)` | |
+
+### F.3 Permission catalog — PASS (with Phase 4 caveat)
+
+| Layer | Route slugs | Scope slugs | Phase 4 only | Total |
+|-------|-------------|-------------|--------------|-------|
+| Org | 76 | 4 | 7 | **87** |
+| Project | 30 | 2 | 0 | **32** |
+| **Combined assignable** | | | | **119** |
+
+**Auth-only (no slug):** `organizations.index`, `organizations.create`, `organizations.store`, `organizations.select`, public invite accept.
+
+**Cross-checks:**
+
+- §11.3 `orgGroups()` slugs match §11.4 route table (excluding scope + Phase 4) — ✓
+- §11.5 project routes match Appendix D project table — ✓ 32/32
+- Appendix D org table includes AI slugs + `org.mail-profiles.oauth.callback` — ✓
+- Phase 4 `org.integrations.*` / `org.webhooks.*` in registry but **no HTTP routes yet** — documented as Phase 4; wildcard rows in Appendix D
+
+**Role template alignment:**
+
+- §5.3 `viewer` uses `org.tasks.scope.own` — matches §11.9 ✓
+- §11.9 default role slug lists reference §11.3 groups ✓
+
+### F.4 Request validation params — catalog
+
+| Form request | Key rules | § |
+|--------------|-----------|---|
+| `StoreOrganizationRequest` | `name` required; optional `slug`, `settings.*` | §14 |
+| `UpdateOrganizationContextRequest` | `organization_id` + active membership | §14 |
+| `StoreTaskRequest` | `project_id` required; `assignee_member_ids[]` | §14 |
+| `StoreFocusPinRequest` | `task_id`; cap + visibility rules | §14 |
+| `StoreProjectMemberRequest` | `organization_member_id`, `project_role_id` | §14 |
+| `UpdateOrganizationRolePermissionsRequest` | `permissions.*` ∈ `allOrgSlugs()` | §14 |
+| `StoreOrganizationMailProfileRequest` | provider-specific `config.*` | §14 |
+| `StoreOrganizationInvitationRequest` | `email`, `organization_role_id` | §14 |
+
+### F.5 Query parameters — catalog
+
+| Endpoint | Params | § |
+|----------|--------|---|
+| Command centre | `focus_date`, `project_id`, `assignee_member_id` | §13.2 |
+| Tasks index | `kind` (`task`\|`reminder`\|`decision`), `project_id` | §13.2 |
+| Organization home | *(none — lists all accessible orgs)* | §5.0 |
+
+### F.6 Issues fixed in this audit
+
+| Issue | Resolution |
+|-------|------------|
+| §2 headers misnumbered as 4.x | Renamed to §2.1–§2.3 |
+| Stale "Org-level tasks" assignee rule | Removed; all tasks require `project_id` |
+| §5.3 `viewer` listed `scope.all` | Corrected to `scope.own` + `scope.member` |
+| §6.1 said "13 tables" | Updated to 29 |
+| Default `settings` missing `ai_enabled` | Added to §8.2 + §9 JSON |
+| Appendix D catalog count approximate | Set to exact 87 + 32 = 119 |
+| Missing `StoreOrganizationRequest` | Added §14 |
+| Missing Gmail OAuth slug in Appendix D | Added `org.mail-profiles.oauth.callback` |
+
+### F.7 Known doc structure notes (non-blocking)
+
+- §3 subsections appear out of numeric order (3.4 → 3.5 → 3.2 → 3.3); content is correct — reorder optional in editorial pass.
+- §2 domain flow uses heading numbers 2.x; §4 prototype analysis correctly uses 4.x — no conflict after fix.
+
+### F.8 Pre-implementation checklist
+
+Before writing migrations, confirm:
+
+1. Run `CommandCentrePermissionRegistry::allOrgSlugs()` generator tests against §11.3 + Appendix D.
+2. Single migration file per phase matching §19 order.
+3. `OrganizationBootstrapService` + `ProjectBootstrapService` feature tests for role materialization counts (5 org + 4 project roles).
+4. Fortify post-login redirect → `route('organizations.index')`.
 
 ---
 
