@@ -7,6 +7,7 @@ import { CreateTaskDialog } from '@/components/command-centre/create-task-dialog
 import { EmptyState } from '@/components/command-centre/empty-state';
 import { PageShell } from '@/components/command-centre/page-shell';
 import { StatusPill } from '@/components/command-centre/status-pill';
+import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
 import type {
@@ -100,18 +101,20 @@ export default function TasksIndex({
                             {tasks.map((task) => (
                                 <li key={task.id} className="tcm-list-row">
                                     <div className="min-w-0 flex-1">
-                                        <Link
-                                            href={TaskController.show.url([
-                                                organization.id,
-                                                task.id,
-                                            ])}
-                                            className={`block truncate text-sm font-medium hover:text-primary hover:underline ${task.is_done ? 'text-muted-foreground line-through' : ''}`}
-                                        >
-                                            {task.title}
-                                        </Link>
+                                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                                            <TaskKindBadge kind={task.kind} />
+                                            <Link
+                                                href={TaskController.show.url([
+                                                    organization.id,
+                                                    task.id,
+                                                ])}
+                                                className={`truncate text-sm font-medium hover:text-primary hover:underline ${task.is_done ? 'text-muted-foreground line-through' : ''}`}
+                                            >
+                                                {task.title}
+                                            </Link>
+                                        </div>
                                         <p className="text-xs text-muted-foreground">
-                                            {task.project_name ?? 'Project'} ·{' '}
-                                            {task.kind}
+                                            {task.project_name ?? 'Project'}
                                         </p>
                                     </div>
                                     <StatusPill status={task.status} />

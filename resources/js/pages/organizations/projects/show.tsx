@@ -8,6 +8,7 @@ import { CreateTaskDialog } from '@/components/command-centre/create-task-dialog
 import { PageShell } from '@/components/command-centre/page-shell';
 import { ProjectKanban } from '@/components/command-centre/project-kanban';
 import { StatusPill } from '@/components/command-centre/status-pill';
+import { TaskKindLegend } from '@/components/command-centre/task-kind-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { canOrg, canProject } from '@/hooks/use-org-permissions';
@@ -28,6 +29,7 @@ type ProjectDetail = {
 
 type ProjectTask = {
     id: number;
+    kind: string;
     title: string;
     status: string;
     is_done: boolean;
@@ -37,6 +39,7 @@ type ProjectTask = {
 
 type TeamMember = {
     id: number;
+    organization_member_id: number;
     display_name: string | null;
     role_name: string | null | undefined;
 };
@@ -105,6 +108,11 @@ export default function ProjectShow({
                                     { id: project.id, name: project.name },
                                 ]}
                                 defaultProjectId={project.id}
+                                teamMembers={team.map((member) => ({
+                                    id: member.organization_member_id,
+                                    display_name: member.display_name,
+                                    role_name: member.role_name,
+                                }))}
                             />
                         )}
                         <Button asChild variant="outline" size="sm">
@@ -260,12 +268,13 @@ export default function ProjectShow({
 
                     <CommandCard
                         title="Task board"
-                        description="Drag cards between columns on desktop, or use the status menu on mobile."
+                        description="Tasks, decisions, and reminders share the board — each type is color-coded."
                         dot="blue"
                         noPadding
                         className="min-w-0"
                         contentClassName="min-w-0 overflow-x-auto p-3 sm:p-4"
                     >
+                        <TaskKindLegend className="mb-3 px-0.5" />
                         <ProjectKanban
                             organizationId={organization.id}
                             tasks={tasks}

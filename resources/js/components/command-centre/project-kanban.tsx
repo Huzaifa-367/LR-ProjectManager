@@ -4,6 +4,10 @@ import { GripVertical } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { EmptyState } from '@/components/command-centre/empty-state';
 import { StatusPill } from '@/components/command-centre/status-pill';
+import {
+    TaskKindBadge,
+    taskKindCardClass,
+} from '@/components/command-centre/task-kind-badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { canOrg } from '@/hooks/use-org-permissions';
 import type { CommandCentrePermissions } from '@/types/organization';
@@ -11,6 +15,7 @@ import { cn } from '@/lib/utils';
 
 type KanbanTask = {
     id: number;
+    kind: string;
     title: string;
     status: string;
     is_done: boolean;
@@ -90,7 +95,13 @@ export function ProjectKanban({
     const updateStatus = (taskId: number, status: TaskStatusValue): void => {
         setBoardTasks((current) =>
             current.map((task) =>
-                task.id === taskId ? { ...task, status } : task,
+                task.id === taskId
+                    ? {
+                          ...task,
+                          status,
+                          is_done: status === 'done',
+                      }
+                    : task,
             ),
         );
 
@@ -224,11 +235,20 @@ export function ProjectKanban({
                                         onDragEnd={handleDragEnd}
                                         className={cn(
                                             'tcm-kanban-card',
+                                            taskKindCardClass(task.kind),
                                             canDrag && 'tcm-kanban-card--draggable',
                                             draggingTaskId === task.id &&
                                                 'tcm-kanban-card--dragging',
                                         )}
                                     >
+                                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                                            <TaskKindBadge kind={task.kind} />
+                                            {task.priority && (
+                                                <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                                                    {task.priority}
+                                                </span>
+                                            )}
+                                        </div>
                                         {canDrag && (
                                             <div
                                                 className="mb-2 flex items-center gap-1 text-[10px] text-muted-foreground"
@@ -259,11 +279,6 @@ export function ProjectKanban({
                                         </Link>
                                         <div className="mb-2 flex flex-wrap items-center gap-1.5">
                                             <StatusPill status={task.status} />
-                                            {task.priority && (
-                                                <span className="text-[10px] text-muted-foreground uppercase">
-                                                    {task.priority}
-                                                </span>
-                                            )}
                                         </div>
                                         {task.assignees.length > 0 && (
                                             <p className="mb-2 truncate text-[11px] text-muted-foreground">

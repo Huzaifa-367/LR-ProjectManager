@@ -14,6 +14,13 @@ class SyncTaskAssigneesRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('assignee_member_ids')) {
+            $this->merge(['assignee_member_ids' => []]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

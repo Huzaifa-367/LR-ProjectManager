@@ -13,15 +13,17 @@ use App\Models\Attachment;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\Project;
+use App\Models\ProjectMember;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Support\ActivityLogger;
 use App\Support\CommandCentreResourcePresenter;
 use App\Support\CreateFollowUpReminder;
 use App\Support\EffectivePermissionService;
+use App\Support\NormalizeTaskCompletion;
+use App\Support\NotificationDispatcher;
 use App\Support\OrganizationMemberResolver;
 use App\Support\ProjectVisibilityScope;
-use App\Support\NotificationDispatcher;
 use App\Support\ScheduleTaskDeadlineReminders;
 use App\Support\SelectedProjectManager;
 use App\Support\SyncMemberDailyFocus;
@@ -166,6 +168,19 @@ class TaskController extends Controller
             ->values()
             ->all();
 
+        $projectTeam = ProjectMember::query()
+            ->where('project_id', $task->project_id)
+            ->with(['organizationMember', 'role'])
+            ->orderBy('joined_at')
+            ->get()
+            ->map(fn (ProjectMember $projectMember): array => [
+                'organization_member_id' => $projectMember->organization_member_id,
+                'display_name' => $projectMember->organizationMember?->display_name,
+                'role_name' => $projectMember->role?->name,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('tasks/show', [
             'organization' => [
                 'id' => $organization->id,
@@ -173,6 +188,7 @@ class TaskController extends Controller
                 'slug' => $organization->slug,
             ],
             'task' => CommandCentreResourcePresenter::task($task),
+            'projectTeam' => $projectTeam,
             'comments' => $comments,
             'attachments' => $attachments,
             'permissions' => CommandCentreResourcePresenter::permissions(
@@ -195,9 +211,18 @@ class TaskController extends Controller
         abort_unless($task->organization_id === $organization->id, 404);
         abort_unless($permissions->memberCanUpdateTask($member, $task), 403);
 
-        $task->update($request->validated());
+        $validated = $request->validated();
+        $validated = app(NormalizeTaskCompletion::class)->mergeForUpdate($task, $member, $validated);
+
+        $task->update($validated);
+
         app(SyncMemberDailyFocus::class)->syncForTask($task->fresh(['assignees']));
-        app(ScheduleTaskDeadlineReminders::class)->syncForTask($task->fresh(['assignees', 'organization']));
+
+        if ($task->is_done) {
+            app(ScheduleTaskDeadlineReminders::class)->cancelForTask($task);
+        } else {
+            app(ScheduleTaskDeadlineReminders::class)->syncForTask($task->fresh(['assignees', 'organization']));
+        }
         app(ActivityLogger::class)->logForAuthenticatedUser($task, 'task.updated');
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Task updated.')]);
@@ -241,10 +266,20 @@ class TaskController extends Controller
 
         $status = TaskStatus::from($request->validated('status'));
 
-        $task->update(['status' => $status]);
+        $task->update(
+            app(NormalizeTaskCompletion::class)->forStatusChange($task, $member, $status),
+        );
 
         if ($status === TaskStatus::FollowUp) {
             app(CreateFollowUpReminder::class)->createForTask($task->fresh(['assignees']), $member);
+        }
+
+        app(SyncMemberDailyFocus::class)->syncForTask($task->fresh(['assignees']));
+
+        if ($status === TaskStatus::Done) {
+            app(ScheduleTaskDeadlineReminders::class)->cancelForTask($task);
+        } else {
+            app(ScheduleTaskDeadlineReminders::class)->syncForTask($task->fresh(['assignees', 'organization']));
         }
 
         app(ActivityLogger::class)->logForAuthenticatedUser($task, 'task.status_changed', [
@@ -294,12 +329,9 @@ class TaskController extends Controller
 
         $isDone = ! $task->is_done;
 
-        $task->update([
-            'is_done' => $isDone,
-            'completed_at' => $isDone ? now() : null,
-            'completed_by_member_id' => $isDone ? $member->id : null,
-            'status' => $isDone ? TaskStatus::Done : TaskStatus::Pending,
-        ]);
+        $task->update(
+            app(NormalizeTaskCompletion::class)->forToggleDone($task, $member, $isDone),
+        );
         app(SyncMemberDailyFocus::class)->syncForTask($task->fresh(['assignees']));
         if ($isDone) {
             app(ScheduleTaskDeadlineReminders::class)->cancelForTask($task);

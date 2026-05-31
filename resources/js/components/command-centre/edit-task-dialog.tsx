@@ -3,6 +3,8 @@ import { Form } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { SelectField } from '@/components/command-centre/select-field';
+import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -15,24 +17,19 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-
-const TASK_STATUSES = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'in_progress', label: 'In progress' },
-    { value: 'done', label: 'Done' },
-    { value: 'stuck', label: 'Stuck' },
-    { value: 'hold', label: 'On hold' },
-    { value: 'follow_up', label: 'Follow up' },
-] as const;
+import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/task-options';
 
 type EditTaskDialogProps = {
     organizationId: number;
     task: {
         id: number;
+        kind: string;
         title: string;
         description: string | null;
         status: string;
+        priority?: string | null;
         external_link?: string | null;
     };
     trigger?: React.ReactNode;
@@ -55,11 +52,12 @@ export function EditTaskDialog({
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Edit task</DialogTitle>
-                    <DialogDescription>
-                        Update title, description, or status.
+                    <DialogTitle>Edit work item</DialogTitle>
+                    <DialogDescription className="flex flex-wrap items-center gap-2">
+                        <TaskKindBadge kind={task.kind} />
+                        <span>Update details and workflow status.</span>
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -77,6 +75,7 @@ export function EditTaskDialog({
                                     defaultValue={task.title}
                                     required
                                     autoFocus
+                                    disabled={processing}
                                 />
                                 <InputError message={errors.title} />
                             </div>
@@ -89,27 +88,32 @@ export function EditTaskDialog({
                                     name="description"
                                     defaultValue={task.description ?? ''}
                                     rows={4}
+                                    disabled={processing}
                                 />
                                 <InputError message={errors.description} />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="edit-task-status">Status</Label>
-                                <select
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <SelectField
                                     id="edit-task-status"
                                     name="status"
+                                    label="Status"
+                                    options={TASK_STATUSES}
                                     defaultValue={task.status}
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                                >
-                                    {TASK_STATUSES.map((status) => (
-                                        <option
-                                            key={status.value}
-                                            value={status.value}
-                                        >
-                                            {status.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError message={errors.status} />
+                                    disabled={processing}
+                                    error={errors.status}
+                                />
+                                <SelectField
+                                    id="edit-task-priority"
+                                    name="priority"
+                                    label="Priority"
+                                    options={[
+                                        { value: '', label: 'None' },
+                                        ...TASK_PRIORITIES,
+                                    ]}
+                                    defaultValue={task.priority ?? ''}
+                                    disabled={processing}
+                                    error={errors.priority}
+                                />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-task-link">
@@ -121,6 +125,7 @@ export function EditTaskDialog({
                                     type="url"
                                     defaultValue={task.external_link ?? ''}
                                     placeholder="https://"
+                                    disabled={processing}
                                 />
                                 <InputError message={errors.external_link} />
                             </div>
@@ -129,10 +134,12 @@ export function EditTaskDialog({
                                     type="button"
                                     variant="outline"
                                     onClick={() => setOpen(false)}
+                                    disabled={processing}
                                 >
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
                                     Save changes
                                 </Button>
                             </DialogFooter>

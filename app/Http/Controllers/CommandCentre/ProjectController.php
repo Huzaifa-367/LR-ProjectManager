@@ -115,6 +115,7 @@ class ProjectController extends Controller
             ->get()
             ->map(fn (ProjectMember $projectMember): array => [
                 'id' => $projectMember->id,
+                'organization_member_id' => $projectMember->organization_member_id,
                 'display_name' => $projectMember->organizationMember?->display_name,
                 'role_name' => $projectMember->role?->name,
             ])
@@ -122,7 +123,13 @@ class ProjectController extends Controller
             ->all();
 
         $openTaskCount = collect($tasks)->filter(
-            fn (array $task): bool => ($task['is_done'] ?? false) === false,
+            fn (array $task): bool => ($task['kind'] ?? 'task') === 'task'
+                && ($task['is_done'] ?? false) === false,
+        )->count();
+
+        $doneTaskCount = collect($tasks)->filter(
+            fn (array $task): bool => ($task['kind'] ?? 'task') === 'task'
+                && ($task['is_done'] ?? false) === true,
         )->count();
 
         return Inertia::render('organizations/projects/show', [
@@ -136,7 +143,7 @@ class ProjectController extends Controller
             'team' => $team,
             'taskSummary' => [
                 'open' => $openTaskCount,
-                'done' => count($tasks) - $openTaskCount,
+                'done' => $doneTaskCount,
             ],
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member, $project),
         ]);
