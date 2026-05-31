@@ -48,6 +48,152 @@ TXT;
     }
 
     /**
+     * @return list<array{title: string, profile: string, brief: string}>
+     */
+    public static function exampleBriefs(): array
+    {
+        return [
+            [
+                'title' => __('Data science bootcamp cohort'),
+                'profile' => 'training',
+                'brief' => <<<'TXT'
+Project: Data Science Bootcamp — Spring Cohort
+
+Objective: Launch a 12-week data science bootcamp for career switchers with job-ready portfolio projects by June.
+
+Scope / deliverables:
+- Finalize curriculum modules (Python, SQL, ML fundamentals, capstone)
+- Recruit and onboard two instructors and teaching assistants
+- Build learner portal with assignments, submissions, and progress tracking
+- Run admissions campaign and enroll 25 learners
+- Deliver pilot week and iterate from learner feedback
+
+Timeline:
+- Weeks 1–4: Curriculum, portal MVP, instructor hiring
+- Weeks 5–8: Marketing and admissions
+- Week 9: Cohort kickoff; capstone demos in week 12
+
+Success criteria:
+- 80% module completion rate
+- 90% learner satisfaction on post-program survey
+- At least 15 learners submit a capstone project
+
+Decisions needed:
+- Approve tuition pricing and scholarship budget
+- Choose LMS vs custom portal for assignments
+
+Check-ins:
+- Weekly curriculum sync with instructors
+- Bi-weekly admissions pipeline review
+TXT,
+            ],
+            [
+                'title' => __('Corporate Python workshop'),
+                'profile' => 'workshop',
+                'brief' => <<<'TXT'
+Project: Corporate Python Automation Workshop
+
+Objective: Deliver a two-day hands-on workshop that helps client engineering teams automate repetitive reporting tasks using Python.
+
+Scope / deliverables:
+- Discovery call and pre-work survey with client stakeholders
+- Design agenda: Python basics, pandas, API integrations, lab exercises
+- Prepare slide deck, exercise notebooks, and facilitator guide
+- Facilitate remote workshop with breakout labs
+- Publish recap document with next-step recommendations
+
+Timeline:
+- 3 weeks before: Discovery and agenda sign-off
+- 2 weeks before: Materials finalized and dry run
+- Workshop dates: May 14–15 (9:00–17:00, remote via Zoom)
+
+Success criteria:
+- Participant satisfaction score ≥ 4.5 / 5
+- All labs completed by at least 90% of attendees
+- Client sponsor sign-off on deliverables within one week
+
+Decisions needed:
+- Confirm final attendee list and skill baseline
+- Approve recording policy for sessions
+
+Check-ins:
+- Pre-work reminder one week before workshop
+- Day-one debrief between facilitators
+TXT,
+            ],
+            [
+                'title' => __('Student learning portal'),
+                'profile' => 'software',
+                'brief' => <<<'TXT'
+Project: Student Learning Portal v2
+
+Objective: Replace the legacy course portal with a mobile-friendly experience so learners can access modules, submit assignments, and track progress in one place by end of Q3.
+
+Scope / deliverables:
+- User authentication with role-based access (learner, instructor, admin)
+- Course catalog, module player, and assignment submission flow
+- Instructor dashboard for grading and cohort analytics
+- Migrate active cohorts from legacy system
+- UAT with one pilot cohort before full rollout
+
+Timeline:
+- Q2: Design, auth, core learner flows in staging
+- Q3 week 1–6: Instructor tools, migration scripts, UAT
+- Q3 week 8: Production rollout for all active cohorts
+
+Success criteria:
+- UAT passed with no critical defects
+- 95% of active learners migrated within two weeks of launch
+- Support ticket volume below baseline after 30 days
+
+Decisions needed:
+- Build vs buy for video hosting integration
+- Go/no-go before production cutover
+
+Check-ins:
+- Weekly engineering standup
+- Steering review every two weeks with product owner
+TXT,
+            ],
+            [
+                'title' => __('Campus career expo'),
+                'profile' => 'event',
+                'brief' => <<<'TXT'
+Project: atomCamp Campus Career Expo 2026
+
+Objective: Host a one-day career expo connecting 300+ graduates with 20 hiring partners and capture measurable hiring outcomes.
+
+Scope / deliverables:
+- Secure venue, AV, and catering; finalize floor plan
+- Recruit employer partners and confirm booth assignments
+- Build registration site and attendee communications (email + SMS reminders)
+- Produce run-of-show, volunteer roster, and speaker program
+- Execute event day logistics and post-event hiring survey
+
+Timeline:
+- T-8 weeks: Venue and anchor sponsors confirmed
+- T-4 weeks: Registration open; employer onboarding complete
+- T-1 week: Final run-of-show and rehearsal
+- Event day: April 18, 2026
+
+Success criteria:
+- 300+ registered attendees; 250+ check-ins on event day
+- 20 confirmed employer booths
+- 60% of attendees report at least one meaningful recruiter conversation
+
+Decisions needed:
+- Approve event budget and sponsor tier pricing
+- Confirm keynote speaker and program length
+
+Check-ins:
+- Weekly planning standup with operations lead
+- Milestone readiness check one week before registration closes
+TXT,
+            ],
+        ];
+    }
+
+    /**
      * @return list<array{label: string, detail: string}>
      */
     public static function wizardSteps(): array

@@ -91,6 +91,12 @@ type WizardStep = {
     detail: string;
 };
 
+type ExampleBrief = {
+    title: string;
+    profile: string;
+    brief: string;
+};
+
 type ProjectOnboardingProps = {
     organization: OrganizationSummary;
     session: AiSessionSummary;
@@ -102,6 +108,7 @@ type ProjectOnboardingProps = {
     wizardSteps: WizardStep[];
     initialPastePlaceholder: string;
     initialPasteGuide: string;
+    exampleBriefs: ExampleBrief[];
     permissions: CommandCentrePermissions;
 };
 
@@ -116,6 +123,7 @@ export default function ProjectOnboarding({
     wizardSteps,
     initialPastePlaceholder,
     initialPasteGuide,
+    exampleBriefs,
     permissions,
 }: ProjectOnboardingProps) {
     const [brief, setBrief] = useState('');
@@ -401,6 +409,44 @@ export default function ProjectOnboarding({
                                                 <Label htmlFor="brief">
                                                     Paste project details
                                                 </Label>
+                                                {exampleBriefs.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Try an example —
+                                                            tap to fill the
+                                                            brief:
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {exampleBriefs.map(
+                                                                (
+                                                                    example,
+                                                                ) => (
+                                                                    <Button
+                                                                        key={
+                                                                            example.title
+                                                                        }
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        disabled={
+                                                                            processing
+                                                                        }
+                                                                        className="h-auto max-w-full px-2.5 py-1 text-left text-xs whitespace-normal"
+                                                                        onClick={() =>
+                                                                            setBrief(
+                                                                                example.brief,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            example.title
+                                                                        }
+                                                                    </Button>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <Textarea
                                                     id="brief"
                                                     name="brief"

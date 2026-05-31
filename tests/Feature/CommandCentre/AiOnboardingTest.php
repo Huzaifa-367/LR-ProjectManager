@@ -442,6 +442,7 @@ TXT;
                 'tasks' => [[
                     'title' => 'First milestone',
                     'status' => 'pending',
+                    'deadline_date' => 'null',
                     'assignee_member_ids' => [$member->id],
                     'kind' => 'task',
                 ]],
@@ -464,6 +465,7 @@ TXT;
             'organization_id' => $organization->id,
             'kind' => TaskKind::Task->value,
             'title' => 'First milestone',
+            'deadline_date' => null,
         ]);
 
         $proposal->refresh();

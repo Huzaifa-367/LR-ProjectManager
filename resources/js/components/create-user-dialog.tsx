@@ -5,6 +5,8 @@ import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
     DialogBody,
     DialogContent,
     DialogDescription,

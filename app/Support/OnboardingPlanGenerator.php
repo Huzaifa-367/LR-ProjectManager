@@ -58,9 +58,17 @@ final class OnboardingPlanGenerator
      */
     private function generateFromAi(string $brief, int $leadMemberId, string $profileKey): ?array
     {
+        $referenceDate = now()->timezone(config('app.timezone'));
+        $todayContext = sprintf(
+            "Today's date: %s (%s), timezone %s.",
+            $referenceDate->format('Y-m-d'),
+            $referenceDate->format('l'),
+            $referenceDate->timezoneName,
+        );
+
         try {
-            $response = (new ProjectOnboardingPlanAgent($profileKey))->prompt(
-                "Create a project onboarding plan from this brief.\n\nBrief:\n---\n{$brief}\n---",
+            $response = (new ProjectOnboardingPlanAgent($profileKey, $referenceDate))->prompt(
+                "{$todayContext}\n\nCreate a project onboarding plan from this brief.\n\nBrief:\n---\n{$brief}\n---",
                 provider: Config::get('ai.default', 'openai'),
                 model: config('onboarding.ai.model'),
                 timeout: config('onboarding.ai.timeout', 120),
@@ -185,13 +193,15 @@ final class OnboardingPlanGenerator
      */
     private function resolveDeadlineDate(array $task): ?string
     {
-        if (isset($task['deadline_date']) && is_string($task['deadline_date']) && $task['deadline_date'] !== '') {
-            return $task['deadline_date'];
+        $normalized = TaskDeadlineValue::normalize($task['deadline_date'] ?? null);
+
+        if ($normalized !== null) {
+            return $normalized;
         }
 
         return match ((string) ($task['deadline_type'] ?? 'none')) {
-            'today' => now()->toDateString(),
-            'this_week' => now()->endOfWeek()->toDateString(),
+            'today' => now()->toDateTimeString(),
+            'this_week' => now()->endOfWeek()->toDateTimeString(),
             default => null,
         };
     }

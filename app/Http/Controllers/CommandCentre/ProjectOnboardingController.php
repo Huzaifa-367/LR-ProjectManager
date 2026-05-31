@@ -98,6 +98,7 @@ class ProjectOnboardingController extends Controller
             'wizardSteps' => OnboardingRequirementRegistry::wizardSteps(),
             'initialPastePlaceholder' => OnboardingRequirementRegistry::initialPastePlaceholder(),
             'initialPasteGuide' => OnboardingRequirementRegistry::initialPasteGuide(),
+            'exampleBriefs' => OnboardingRequirementRegistry::exampleBriefs(),
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member),
         ]);
     }

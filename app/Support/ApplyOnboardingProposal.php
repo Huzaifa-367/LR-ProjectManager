@@ -95,7 +95,7 @@ final class ApplyOnboardingProposal
                 'status' => isset($draft['status'])
                     ? TaskStatus::tryFrom((string) $draft['status']) ?? TaskStatus::Pending
                     : TaskStatus::Pending,
-                'deadline_date' => $draft['deadline_date'] ?? null,
+                'deadline_date' => TaskDeadlineValue::normalize($draft['deadline_date'] ?? null),
                 'meta' => $draft['meta'] ?? null,
                 'sort_order' => $draft['sort_order'] ?? 0,
             ]);
