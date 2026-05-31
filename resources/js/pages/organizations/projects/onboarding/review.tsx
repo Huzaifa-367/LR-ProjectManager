@@ -1,9 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import AiOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/AiOnboardingController';
 import ProjectOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/ProjectOnboardingController';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { EmptyState } from '@/components/command-centre/empty-state';
 import { ExpandableText } from '@/components/command-centre/expandable-text';
+import { FormBusyOverlay } from '@/components/command-centre/form-busy-overlay';
 import { OnboardingPlanItem } from '@/components/command-centre/onboarding-plan-item';
 import { PageShell } from '@/components/command-centre/page-shell';
 import { StatusPill } from '@/components/command-centre/status-pill';
@@ -11,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { canOrg } from '@/hooks/use-org-permissions';
 import { cn } from '@/lib/utils';
 import type {
@@ -241,64 +243,76 @@ export default function ReviewProposal({
                         description="Short titles work best on dashboards. Other payload fields are preserved."
                         dot="gold"
                     >
-                        <form
+                        <Form
                             {...AiOnboardingController.update.form({
                                 organization: organization.id,
                                 aiOnboardingProposal: proposal.id,
                             })}
                             className="flex flex-col gap-4 sm:flex-row sm:items-end"
                         >
-                            <div className="grow space-y-2">
-                                <Label htmlFor="project_name">Project title</Label>
-                                <Input
-                                    id="project_name"
-                                    name="payload[project][name]"
-                                    defaultValue={
-                                        proposal.payload.project.name
-                                    }
-                                    maxLength={55}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="payload[project][objective]"
-                                    value={
-                                        proposal.payload.project.objective ??
-                                        ''
-                                    }
-                                />
-                                <input
-                                    type="hidden"
-                                    name="payload[project][next_action]"
-                                    value={
-                                        proposal.payload.project.next_action ??
-                                        ''
-                                    }
-                                />
-                                <input
-                                    type="hidden"
-                                    name="payload[team]"
-                                    value={JSON.stringify(team)}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="payload[tasks]"
-                                    value={JSON.stringify(tasks)}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="payload[decisions]"
-                                    value={JSON.stringify(decisions)}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="payload[reminders]"
-                                    value={JSON.stringify(reminders)}
-                                />
-                            </div>
-                            <Button type="submit" variant="secondary">
-                                Save title
-                            </Button>
-                        </form>
+                            {({ processing }) => (
+                                <>
+                                    <div className="grow space-y-2">
+                                        <Label htmlFor="project_name">
+                                            Project title
+                                        </Label>
+                                        <Input
+                                            id="project_name"
+                                            name="payload[project][name]"
+                                            defaultValue={
+                                                proposal.payload.project.name
+                                            }
+                                            maxLength={55}
+                                            disabled={processing}
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="payload[project][objective]"
+                                            value={
+                                                proposal.payload.project
+                                                    .objective ?? ''
+                                            }
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="payload[project][next_action]"
+                                            value={
+                                                proposal.payload.project
+                                                    .next_action ?? ''
+                                            }
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="payload[team]"
+                                            value={JSON.stringify(team)}
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="payload[tasks]"
+                                            value={JSON.stringify(tasks)}
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="payload[decisions]"
+                                            value={JSON.stringify(decisions)}
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="payload[reminders]"
+                                            value={JSON.stringify(reminders)}
+                                        />
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        variant="secondary"
+                                        disabled={processing}
+                                    >
+                                        {processing && <Spinner />}
+                                        Save title
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
                     </CommandCard>
                 )}
 
@@ -306,38 +320,68 @@ export default function ReviewProposal({
                     <div className="flex flex-wrap gap-2">
                         {canApprove &&
                             proposal.status === 'pending_review' && (
-                                <form
+                                <Form
                                     {...AiOnboardingController.approve.form({
                                         organization: organization.id,
                                         aiOnboardingProposal: proposal.id,
                                     })}
                                 >
-                                    <Button type="submit">Approve plan</Button>
-                                </form>
+                                    {({ processing }) => (
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing && <Spinner />}
+                                            Approve plan
+                                        </Button>
+                                    )}
+                                </Form>
                             )}
                         {canApply && proposal.status === 'approved' && (
-                            <form
+                            <Form
                                 {...AiOnboardingController.apply.form({
                                     organization: organization.id,
                                     aiOnboardingProposal: proposal.id,
                                 })}
                             >
-                                <Button type="submit">
-                                    Apply to Command Centre
-                                </Button>
-                            </form>
+                                {({ processing }) => (
+                                    <>
+                                        <FormBusyOverlay
+                                            visible={processing}
+                                            title="Applying plan"
+                                            description="Creating the project, team roles, and work items in your Command Centre."
+                                        />
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing && <Spinner />}
+                                            {processing
+                                                ? 'Applying…'
+                                                : 'Apply to Command Centre'}
+                                        </Button>
+                                    </>
+                                )}
+                            </Form>
                         )}
                         {canReject && (
-                            <form
+                            <Form
                                 {...AiOnboardingController.reject.form({
                                     organization: organization.id,
                                     aiOnboardingProposal: proposal.id,
                                 })}
                             >
-                                <Button type="submit" variant="outline">
-                                    Reject
-                                </Button>
-                            </form>
+                                {({ processing }) => (
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        disabled={processing}
+                                    >
+                                        {processing && <Spinner />}
+                                        Reject
+                                    </Button>
+                                )}
+                            </Form>
                         )}
                     </div>
                     <p

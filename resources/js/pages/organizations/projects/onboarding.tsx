@@ -1,10 +1,11 @@
-import { Head, Link } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import AiOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/AiOnboardingController';
 import ProjectOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/ProjectOnboardingController';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { EmptyState } from '@/components/command-centre/empty-state';
+import { FormBusyOverlay } from '@/components/command-centre/form-busy-overlay';
 import { PageShell } from '@/components/command-centre/page-shell';
 import { StatusPill } from '@/components/command-centre/status-pill';
 import { Badge } from '@/components/ui/badge';
@@ -12,76 +13,19 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Spinner } from '@/components/ui/spinner';
 import { canOrg } from '@/hooks/use-org-permissions';
 import { useOrganizationContext } from '@/hooks/use-organization-context';
 import { cn } from '@/lib/utils';
+import {
+    applySuggestion,
+    isSuggestionSelected,
+    type QuestionSuggestion,
+} from '@/lib/onboarding-answers';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
 } from '@/types/organization';
-
-type QuestionSuggestion = {
-    label: string;
-    value: string;
-    mode: 'replace' | 'append';
-};
-
-function normalizeListLine(value: string): string {
-    return value.startsWith('- ') ? value : `- ${value}`;
-}
-
-function answerContainsValue(answer: string, value: string): boolean {
-    const normalized = normalizeListLine(value).trim();
-
-    return answer
-        .split('\n')
-        .map((line) => line.trim())
-        .some(
-            (line) =>
-                line === normalized ||
-                line === value.trim() ||
-                line === `- ${value.trim()}`,
-        );
-}
-
-function applySuggestion(
-    current: string,
-    suggestion: QuestionSuggestion,
-): string {
-    if (suggestion.mode === 'replace') {
-        return suggestion.value;
-    }
-
-    const line = normalizeListLine(suggestion.value);
-    const lines = current
-        .split('\n')
-        .map((entry) => entry.trim())
-        .filter((entry) => entry !== '');
-
-    if (answerContainsValue(current, suggestion.value)) {
-        return lines
-            .filter(
-                (entry) =>
-                    entry !== line.trim() &&
-                    entry !== suggestion.value.trim() &&
-                    entry !== `- ${suggestion.value.trim()}`,
-            )
-            .join('\n');
-    }
-
-    return current.trim() === '' ? line : `${current.trim()}\n${line}`;
-}
-
-function isSuggestionSelected(
-    current: string,
-    suggestion: QuestionSuggestion,
-): boolean {
-    if (suggestion.mode === 'replace') {
-        return current.trim() === suggestion.value.trim();
-    }
-
-    return answerContainsValue(current, suggestion.value);
-}
 
 type AiSessionSummary = {
     id: number;
@@ -248,15 +192,23 @@ export default function ProjectOnboarding({
                     },
                 ]}
                 actions={
-                    <form
+                    <Form
                         {...ProjectOnboardingController.reset.form({
                             organization: organization.id,
                         })}
                     >
-                        <Button type="submit" variant="outline" size="sm">
-                            Start fresh
-                        </Button>
-                    </form>
+                        {({ processing }) => (
+                            <Button
+                                type="submit"
+                                variant="outline"
+                                size="sm"
+                                disabled={processing}
+                            >
+                                {processing && <Spinner />}
+                                Start fresh
+                            </Button>
+                        )}
+                    </Form>
                 }
             >
                 {!aiEnabled && (
@@ -408,214 +360,301 @@ export default function ProjectOnboarding({
                     dot="crimson"
                 >
                     {canPropose && aiEnabled ? (
-                        <form
+                        <Form
                             {...AiOnboardingController.propose.form({
                                 organization: organization.id,
                             })}
                             className="space-y-4"
                         >
-                            <input
-                                type="hidden"
-                                name="ai_session_id"
-                                value={session.id}
-                            />
+                            {({ processing }) => {
+                                const isGeneratingPlan =
+                                    isFollowUpStep &&
+                                    (contextAssessment.is_complete ||
+                                        contextAssessment.readiness_percent >=
+                                            80);
 
-                            {isInitialStep && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="brief">
-                                        Paste project details
-                                    </Label>
-                                    <Textarea
-                                        id="brief"
-                                        name="brief"
-                                        value={brief}
-                                        onChange={(event) =>
-                                            setBrief(event.target.value)
-                                        }
-                                        rows={14}
-                                        placeholder={initialPastePlaceholder}
-                                    />
-                                </div>
-                            )}
+                                return (
+                                    <>
+                                        <FormBusyOverlay
+                                            visible={processing}
+                                            title={
+                                                isGeneratingPlan
+                                                    ? 'Generating your plan'
+                                                    : isFollowUpStep
+                                                      ? 'Processing your answers'
+                                                      : 'Analyzing your brief'
+                                            }
+                                            description={
+                                                isGeneratingPlan
+                                                    ? 'AI is building tasks, decisions, and reminders. This may take up to a minute.'
+                                                    : 'Hang tight while we review what you provided.'
+                                            }
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="ai_session_id"
+                                            value={session.id}
+                                        />
 
-                            {isFollowUpStep && (
-                                <>
-                                    <div className="space-y-4">
-                                        {textQuestions.map((question) => (
-                                            <div
-                                                key={question.key}
-                                                className="space-y-2 rounded-lg border border-border/60 p-3"
-                                            >
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <Label
-                                                        htmlFor={`answer-${question.key}`}
-                                                        className="text-sm font-semibold"
-                                                    >
-                                                        {question.label}
-                                                    </Label>
-                                                    <Badge
-                                                        variant={
-                                                            question.required
-                                                                ? 'default'
-                                                                : 'outline'
-                                                        }
-                                                        className="text-[10px]"
-                                                    >
-                                                        {question.required
-                                                            ? 'Required'
-                                                            : 'Optional'}
-                                                    </Badge>
-                                                </div>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {question.prompt}
-                                                </p>
-                                                {question.suggestions?.length >
-                                                    0 && (
-                                                    <div className="space-y-2">
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Quick picks — tap to
-                                                            {question.input_mode ===
-                                                            'list'
-                                                                ? ' add or remove'
-                                                                : ' fill'}
-                                                            :
-                                                        </p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {question.suggestions.map(
-                                                                (
-                                                                    suggestion,
-                                                                ) => {
-                                                                    const currentAnswer =
-                                                                        answers[
-                                                                            question
-                                                                                .key
-                                                                        ] ?? '';
-                                                                    const isSelected =
-                                                                        isSuggestionSelected(
-                                                                            currentAnswer,
-                                                                            suggestion,
-                                                                        );
-
-                                                                    return (
-                                                                        <Button
-                                                                            key={`${question.key}-${suggestion.label}`}
-                                                                            type="button"
-                                                                            variant={
-                                                                                isSelected
-                                                                                    ? 'default'
-                                                                                    : 'outline'
-                                                                            }
-                                                                            size="sm"
-                                                                            className="h-auto max-w-full px-2.5 py-1 text-left text-xs whitespace-normal"
-                                                                            onClick={() =>
-                                                                                updateAnswer(
-                                                                                    question.key,
-                                                                                    applySuggestion(
-                                                                                        currentAnswer,
-                                                                                        suggestion,
-                                                                                    ),
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                suggestion.label
-                                                                            }
-                                                                        </Button>
-                                                                    );
-                                                                },
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                        {isInitialStep && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="brief">
+                                                    Paste project details
+                                                </Label>
                                                 <Textarea
-                                                    id={`answer-${question.key}`}
-                                                    name={`answers[${question.key}]`}
-                                                    value={
-                                                        answers[question.key] ??
-                                                        ''
-                                                    }
+                                                    id="brief"
+                                                    name="brief"
+                                                    value={brief}
                                                     onChange={(event) =>
-                                                        updateAnswer(
-                                                            question.key,
+                                                        setBrief(
                                                             event.target.value,
                                                         )
                                                     }
-                                                    rows={4}
-                                                    placeholder={question.hint}
+                                                    rows={14}
+                                                    disabled={processing}
+                                                    placeholder={
+                                                        initialPastePlaceholder
+                                                    }
                                                 />
                                             </div>
-                                        ))}
-                                    </div>
+                                        )}
 
-                                    <div className="space-y-2">
+                                        {isFollowUpStep && (
+                                            <>
+                                                <div className="space-y-4">
+                                                    {textQuestions.map(
+                                                        (question) => (
+                                                            <div
+                                                                key={
+                                                                    question.key
+                                                                }
+                                                                className="space-y-2 rounded-lg border border-border/60 p-3"
+                                                            >
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <Label
+                                                                        htmlFor={`answer-${question.key}`}
+                                                                        className="text-sm font-semibold"
+                                                                    >
+                                                                        {
+                                                                            question.label
+                                                                        }
+                                                                    </Label>
+                                                                    <Badge
+                                                                        variant={
+                                                                            question.required
+                                                                                ? 'default'
+                                                                                : 'outline'
+                                                                        }
+                                                                        className="text-[10px]"
+                                                                    >
+                                                                        {question.required
+                                                                            ? 'Required'
+                                                                            : 'Optional'}
+                                                                    </Badge>
+                                                                </div>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {
+                                                                        question.prompt
+                                                                    }
+                                                                </p>
+                                                                {question
+                                                                    .suggestions
+                                                                    ?.length >
+                                                                    0 && (
+                                                                    <div className="space-y-2">
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            Quick
+                                                                            picks
+                                                                            — tap
+                                                                            to
+                                                                            {question.input_mode ===
+                                                                            'list'
+                                                                                ? ' add or remove'
+                                                                                : ' fill'}
+                                                                            :
+                                                                        </p>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {question.suggestions.map(
+                                                                                (
+                                                                                    suggestion,
+                                                                                ) => {
+                                                                                    const currentAnswer =
+                                                                                        answers[
+                                                                                            question
+                                                                                                .key
+                                                                                        ] ??
+                                                                                        '';
+                                                                                    const isSelected =
+                                                                                        isSuggestionSelected(
+                                                                                            currentAnswer,
+                                                                                            suggestion,
+                                                                                        );
+
+                                                                                    return (
+                                                                                        <Button
+                                                                                            key={`${question.key}-${suggestion.label}`}
+                                                                                            type="button"
+                                                                                            variant={
+                                                                                                isSelected
+                                                                                                    ? 'default'
+                                                                                                    : 'outline'
+                                                                                            }
+                                                                                            size="sm"
+                                                                                            disabled={
+                                                                                                processing
+                                                                                            }
+                                                                                            className="h-auto max-w-full px-2.5 py-1 text-left text-xs whitespace-normal"
+                                                                                            onClick={() =>
+                                                                                                updateAnswer(
+                                                                                                    question.key,
+                                                                                                    applySuggestion(
+                                                                                                        currentAnswer,
+                                                                                                        suggestion,
+                                                                                                    ),
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            {
+                                                                                                suggestion.label
+                                                                                            }
+                                                                                        </Button>
+                                                                                    );
+                                                                                },
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                <Textarea
+                                                                    id={`answer-${question.key}`}
+                                                                    name={`answers[${question.key}]`}
+                                                                    value={
+                                                                        answers[
+                                                                            question
+                                                                                .key
+                                                                        ] ?? ''
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateAnswer(
+                                                                            question.key,
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    rows={4}
+                                                                    disabled={
+                                                                        processing
+                                                                    }
+                                                                    placeholder={
+                                                                        question.hint
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={processing}
+                                                        className="h-auto px-0 text-muted-foreground"
+                                                        onClick={() =>
+                                                            setShowAdditionalDetails(
+                                                                (current) =>
+                                                                    !current,
+                                                            )
+                                                        }
+                                                    >
+                                                        {showAdditionalDetails
+                                                            ? 'Hide additional details'
+                                                            : 'Add more project details (optional)'}
+                                                    </Button>
+                                                    {showAdditionalDetails && (
+                                                        <Textarea
+                                                            id="brief-extra"
+                                                            name="brief"
+                                                            value={brief}
+                                                            onChange={(event) =>
+                                                                setBrief(
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            rows={6}
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            placeholder="Paste extra notes, links, or bullets not covered above…"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {selectedMembers.map(
+                                            (member, index) => (
+                                                <div
+                                                    key={member.id}
+                                                    className="hidden"
+                                                >
+                                                    <input
+                                                        type="hidden"
+                                                        name={`team[${index}][organization_member_id]`}
+                                                        value={member.id}
+                                                    />
+                                                    <input
+                                                        type="hidden"
+                                                        name={`team[${index}][project_role_slug]`}
+                                                        value={
+                                                            index === 0
+                                                                ? 'project_lead'
+                                                                : 'contributor'
+                                                        }
+                                                    />
+                                                    <input
+                                                        type="hidden"
+                                                        name={`team[${index}][display_name]`}
+                                                        value={
+                                                            member.display_name
+                                                        }
+                                                    />
+                                                </div>
+                                            ),
+                                        )}
+
                                         <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-auto px-0 text-muted-foreground"
-                                            onClick={() =>
-                                                setShowAdditionalDetails(
-                                                    (current) => !current,
-                                                )
+                                            type="submit"
+                                            disabled={
+                                                processing ||
+                                                selectedMembers.length === 0 ||
+                                                (isInitialStep &&
+                                                    brief.trim() === '')
                                             }
                                         >
-                                            {showAdditionalDetails
-                                                ? 'Hide additional details'
-                                                : 'Add more project details (optional)'}
+                                            {processing ? (
+                                                <Spinner />
+                                            ) : (
+                                                <Sparkles className="size-4" />
+                                            )}
+                                            {processing
+                                                ? isGeneratingPlan
+                                                    ? 'Generating plan…'
+                                                    : isFollowUpStep
+                                                      ? 'Processing…'
+                                                      : 'Analyzing…'
+                                                : isFollowUpStep
+                                                  ? 'Continue to plan'
+                                                  : 'Analyze & continue'}
                                         </Button>
-                                        {showAdditionalDetails && (
-                                            <Textarea
-                                                id="brief-extra"
-                                                name="brief"
-                                                value={brief}
-                                                onChange={(event) =>
-                                                    setBrief(event.target.value)
-                                                }
-                                                rows={6}
-                                                placeholder="Paste extra notes, links, or bullets not covered above…"
-                                            />
-                                        )}
-                                    </div>
-                                </>
-                            )}
-
-                            {selectedMembers.map((member, index) => (
-                                <div key={member.id} className="hidden">
-                                    <input
-                                        type="hidden"
-                                        name={`team[${index}][organization_member_id]`}
-                                        value={member.id}
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name={`team[${index}][project_role_slug]`}
-                                        value={
-                                            index === 0
-                                                ? 'project_lead'
-                                                : 'contributor'
-                                        }
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name={`team[${index}][display_name]`}
-                                        value={member.display_name}
-                                    />
-                                </div>
-                            ))}
-
-                            <Button
-                                type="submit"
-                                disabled={
-                                    selectedMembers.length === 0 ||
-                                    (isInitialStep && brief.trim() === '')
-                                }
-                            >
-                                <Sparkles className="size-4" />
-                                {isFollowUpStep
-                                    ? 'Continue to plan'
-                                    : 'Analyze & continue'}
-                            </Button>
-                        </form>
+                                    </>
+                                );
+                            }}
+                        </Form>
                     ) : (
                         <EmptyState>
                             {!aiEnabled

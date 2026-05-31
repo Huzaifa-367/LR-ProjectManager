@@ -9,7 +9,7 @@ use Tests\TestCase;
 class OnboardingBriefParserTest extends TestCase
 {
     #[Test]
-    public function it_parses_structured_brief_into_multiple_tasks_and_decisions(): void
+    public function it_extracts_structure_from_a_structured_brief(): void
     {
         $brief = <<<'TXT'
 Project: TAP Global Expansion
@@ -33,17 +33,14 @@ Decisions needed:
 - Select primary market entry order
 TXT;
 
-        $plan = app(OnboardingBriefParser::class)->parse($brief, 42);
+        $structure = app(OnboardingBriefParser::class)->extractStructure($brief);
 
-        $this->assertSame('TAP Global Expansion', $plan['project_name']);
-        $this->assertStringContainsString('Launch TAP in 3 new markets by Q4', $plan['objective']);
-        $this->assertGreaterThanOrEqual(5, count($plan['tasks']));
-        $this->assertGreaterThanOrEqual(2, count($plan['decisions']));
-        $this->assertNotEmpty($plan['reminders']);
-        $this->assertLessThanOrEqual(58, mb_strlen($plan['tasks'][0]['title']));
-        $this->assertStringContainsString('Work:', $plan['tasks'][0]['description']);
-        $this->assertSame([42], $plan['tasks'][0]['assignee_member_ids']);
-        $this->assertSame('high', $plan['tasks'][0]['priority']);
+        $this->assertSame('TAP Global Expansion', $structure['project_name']);
+        $this->assertStringContainsString('Launch TAP in 3 new markets by Q4', (string) $structure['objective']);
+        $this->assertGreaterThanOrEqual(3, $structure['work_item_count']);
+        $this->assertTrue($structure['has_timeline']);
+        $this->assertTrue($structure['has_success_criteria']);
+        $this->assertTrue($structure['has_decisions']);
     }
 
     #[Test]
@@ -56,18 +53,19 @@ Scope:
 - Market research
 TXT;
 
-        $plan = app(OnboardingBriefParser::class)->parse($brief, 1);
+        $structure = app(OnboardingBriefParser::class)->extractStructure($brief);
 
-        $this->assertLessThanOrEqual(55, mb_strlen($plan['project_name']));
-        $this->assertStringNotContainsString('by Q4', $plan['project_name']);
+        $this->assertLessThanOrEqual(55, mb_strlen((string) $structure['project_name']));
+        $this->assertStringNotContainsString('by Q4', (string) $structure['project_name']);
     }
 
     #[Test]
-    public function it_adds_staple_tasks_for_sparse_briefs(): void
+    public function it_returns_empty_structure_for_blank_briefs(): void
     {
-        $plan = app(OnboardingBriefParser::class)->parse('Launch something important', 1);
+        $structure = app(OnboardingBriefParser::class)->extractStructure('   ');
 
-        $this->assertGreaterThanOrEqual(3, count($plan['tasks']));
-        $this->assertNotSame('', $plan['project_name']);
+        $this->assertNull($structure['project_name']);
+        $this->assertSame(0, $structure['work_item_count']);
+        $this->assertFalse($structure['has_timeline']);
     }
 }

@@ -16,6 +16,7 @@ final class OnboardingProposalGenerator
 {
     public function __construct(
         private readonly OnboardingPlanGenerator $planGenerator,
+        private readonly OnboardingBriefAnalyzer $briefAnalyzer,
     ) {}
 
     /**
@@ -38,8 +39,7 @@ final class OnboardingProposalGenerator
         $leadMemberId = (int) ($team[0]['organization_member_id'] ?? $creator->id);
         $sanitizedBrief = Utf8::sanitize($brief);
 
-        $structure = app(OnboardingBriefParser::class)->extractStructure($sanitizedBrief);
-        $profile = app(OnboardingProjectProfileDetector::class)->detect($sanitizedBrief, $structure);
+        $profile = $this->briefAnalyzer->detectProfile($sanitizedBrief);
 
         $plan = $this->planGenerator->generate($sanitizedBrief, $leadMemberId, $profile['key']);
 
