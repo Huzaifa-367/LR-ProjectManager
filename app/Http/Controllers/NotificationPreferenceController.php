@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationEventType;
 use App\Http\Requests\Organizations\UpdateNotificationPreferencesRequest;
-use App\Models\MemberMailLinkage;
 use App\Models\MemberNotificationPreference;
 use App\Models\Organization;
 use App\Support\CommandCentreResourcePresenter;
@@ -51,22 +50,12 @@ class NotificationPreferenceController extends Controller
             ->values()
             ->all();
 
-        $mailLinkage = MemberMailLinkage::query()
-            ->where('organization_member_id', $member->id)
-            ->first();
-
         return Inertia::render('organizations/settings/notifications', [
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
             'matrix' => $matrix,
-            'mailLinkage' => [
-                'gmail_address' => $mailLinkage?->gmail_address,
-                'is_verified' => $mailLinkage?->is_verified ?? false,
-                'last_tested_at' => $mailLinkage?->last_tested_at?->toIso8601String(),
-                'has_app_pin' => $mailLinkage !== null,
-            ],
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member),
         ]);
     }

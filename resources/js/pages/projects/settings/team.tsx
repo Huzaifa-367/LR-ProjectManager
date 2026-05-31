@@ -1,7 +1,9 @@
 import ProjectController from '@/actions/App/Http/Controllers/CommandCentre/ProjectController';
 import { Head, Link } from '@inertiajs/react';
-import Heading from '@/components/heading';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { EmptyState } from '@/components/command-centre/empty-state';
+import { PageShell } from '@/components/command-centre/page-shell';
+import { Button } from '@/components/ui/button';
 import type { OrganizationSummary } from '@/types/organization';
 
 type TeamMember = {
@@ -31,53 +33,46 @@ export default function ProjectTeamSettings({
     return (
         <>
             <Head title={`Team · ${project.name}`} />
-            <div className="flex flex-col gap-6 p-6">
-                <Heading
-                    title={`Team · ${project.name}`}
-                    description={`Members assigned to this project in ${organization.name}.`}
-                />
-
-                <Card className="max-w-2xl">
-                    <CardHeader>
-                        <CardTitle>Roster</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {team.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">
-                                No team members yet.
-                            </p>
-                        ) : (
-                            team.map((member) => (
-                                <div
-                                    key={member.id}
-                                    className="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0"
-                                >
+            <PageShell
+                title={`Team · ${project.name}`}
+                subtitle={organization.name}
+                stats={[{ label: 'Members', value: team.length }]}
+                actions={
+                    <Button asChild variant="outline" size="sm">
+                        <Link
+                            href={ProjectController.show.url([
+                                organization.id,
+                                project.id,
+                            ])}
+                        >
+                            Back to project
+                        </Link>
+                    </Button>
+                }
+            >
+                <CommandCard title="Roster" dot="blue">
+                    {team.length === 0 ? (
+                        <EmptyState>No team members yet.</EmptyState>
+                    ) : (
+                        <ul className="divide-y divide-border/50">
+                            {team.map((member) => (
+                                <li key={member.id} className="tcm-list-row">
                                     <div>
                                         <p className="font-medium">
                                             {member.display_name ??
                                                 'Unknown member'}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground">
                                             {member.role.name ??
                                                 member.role.slug}
                                         </p>
                                     </div>
-                                </div>
-                            ))
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Link
-                    href={ProjectController.show.url([
-                        organization.id,
-                        project.id,
-                    ])}
-                    className="text-sm underline underline-offset-4"
-                >
-                    Back to project
-                </Link>
-            </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </CommandCard>
+            </PageShell>
         </>
     );
 }

@@ -41,6 +41,7 @@ export type OrganizationContext = {
             created_at: string;
         }>;
     } | null;
+    aiEnabled: boolean;
 };
 
 export type OrganizationSummary = {

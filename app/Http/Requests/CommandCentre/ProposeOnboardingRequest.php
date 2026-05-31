@@ -18,11 +18,28 @@ class ProposeOnboardingRequest extends FormRequest
     {
         return [
             'ai_session_id' => ['required', 'integer', 'exists:ai_sessions,id'],
-            'brief' => ['required', 'string', 'max:5000'],
+            'brief' => ['nullable', 'string', 'max:5000'],
+            'answers' => ['nullable', 'array'],
+            'answers.*' => ['nullable', 'string', 'max:2000'],
             'team' => ['nullable', 'array'],
             'team.*.organization_member_id' => ['required', 'integer', 'exists:organization_members,id'],
             'team.*.project_role_slug' => ['required', 'string', 'max:100'],
             'team.*.display_name' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator): void {
+            $brief = trim((string) $this->input('brief', ''));
+            $answers = array_filter(
+                (array) $this->input('answers', []),
+                fn ($value): bool => trim((string) $value) !== '',
+            );
+
+            if ($brief === '' && $answers === []) {
+                $validator->errors()->add('brief', __('Provide a project brief or answer the follow-up questions.'));
+            }
+        });
     }
 }

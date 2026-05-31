@@ -16,17 +16,17 @@ use App\Http\Controllers\CommandCentre\TaskController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\GmailOAuthController;
 use App\Http\Controllers\InvitationAcceptController;
-use App\Http\Controllers\ProjectContextController;
+use App\Http\Controllers\MemberMailLinkageController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\OrganizationContextController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationInvitationController;
 use App\Http\Controllers\OrganizationMailProfileController;
-use App\Http\Controllers\MemberMailLinkageController;
 use App\Http\Controllers\OrganizationMemberController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\OrganizationReportsController;
 use App\Http\Controllers\OrganizationRoleController;
+use App\Http\Controllers\ProjectContextController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
@@ -84,7 +84,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('organizations.reports.index');
 
             Route::get('mail-profiles', [OrganizationMailProfileController::class, 'index'])
-                ->middleware('org.permission:org.mail-profiles.index')
                 ->name('organizations.mail-profiles.index');
             Route::post('mail-profiles', [OrganizationMailProfileController::class, 'store'])
                 ->middleware('org.permission:org.mail-profiles.store')
@@ -175,6 +174,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 Route::get('projects/onboarding', [ProjectOnboardingController::class, 'create'])
                     ->middleware('org.permission:org.ai-onboarding.start')
                     ->name('organizations.projects.onboarding');
+                Route::post('projects/onboarding/reset', [ProjectOnboardingController::class, 'reset'])
+                    ->middleware('org.permission:org.ai-onboarding.start')
+                    ->name('organizations.projects.onboarding.reset');
             });
 
             Route::get('projects/{project}', [ProjectController::class, 'show'])
@@ -241,7 +243,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                     ->name('organizations.ai-sessions.show');
 
                 Route::post('ai-onboarding/propose', [AiOnboardingController::class, 'propose'])
-                    ->middleware(['org.permission:org.ai-onboarding.propose', 'throttle:10,60'])
+                    ->middleware('org.permission:org.ai-onboarding.propose')
                     ->name('organizations.ai-onboarding.propose');
                 Route::get('ai-onboarding/{aiOnboardingProposal}', [AiOnboardingController::class, 'show'])
                     ->middleware('org.permission:org.ai-onboarding.show')
@@ -256,7 +258,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                     ->middleware('org.permission:org.ai-onboarding.reject')
                     ->name('organizations.ai-onboarding.reject');
                 Route::post('ai-onboarding/{aiOnboardingProposal}/apply', [AiOnboardingController::class, 'apply'])
-                    ->middleware(['org.permission:org.ai-onboarding.apply', 'throttle:5,60'])
+                    ->middleware('org.permission:org.ai-onboarding.apply')
                     ->name('organizations.ai-onboarding.apply');
             });
 

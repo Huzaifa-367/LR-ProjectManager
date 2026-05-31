@@ -144,6 +144,7 @@ final class SelectedOrganizationManager
                 'notifications' => null,
                 'projects' => [],
                 'selectedProject' => null,
+                'aiEnabled' => true,
             ];
         }
 
@@ -238,6 +239,9 @@ final class SelectedOrganizationManager
                 'name' => $selectedOrganization->name,
                 'slug' => $selectedOrganization->slug,
             ] : null,
+            'aiEnabled' => $selectedOrganization instanceof Organization
+                ? (bool) (($selectedOrganization->settings ?? Organization::defaultSettings())['ai_enabled'] ?? true)
+                : true,
             'organizations' => $memberships
                 ->map(function (OrganizationMember $member) use ($user): array {
                     $membership = 'member';

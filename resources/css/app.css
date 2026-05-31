@@ -9,9 +9,10 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --font-display: 'Syne', var(--font-sans);
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -62,25 +63,25 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.985 0.002 285);
+    --foreground: oklch(0.16 0.01 285);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.16 0.01 285);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.16 0.01 285);
+    --primary: oklch(0.5 0.18 25);
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.96 0.004 285);
+    --secondary-foreground: oklch(0.22 0.01 285);
+    --muted: oklch(0.95 0.004 285);
+    --muted-foreground: oklch(0.5 0.02 285);
+    --accent: oklch(0.95 0.01 25);
+    --accent-foreground: oklch(0.22 0.01 285);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
+    --border: oklch(0.9 0.006 285);
+    --input: oklch(0.9 0.006 285);
+    --ring: oklch(0.5 0.18 25);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
@@ -98,25 +99,25 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --background: oklch(0.13 0.006 285);
+    --foreground: oklch(0.96 0.004 285);
+    --card: oklch(0.16 0.006 285);
+    --card-foreground: oklch(0.96 0.004 285);
+    --popover: oklch(0.16 0.006 285);
+    --popover-foreground: oklch(0.96 0.004 285);
+    --primary: oklch(0.58 0.19 25);
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.22 0.008 285);
+    --secondary-foreground: oklch(0.96 0.004 285);
+    --muted: oklch(0.22 0.008 285);
+    --muted-foreground: oklch(0.68 0.02 285);
+    --accent: oklch(0.24 0.02 25);
+    --accent-foreground: oklch(0.96 0.004 285);
     --destructive: oklch(0.396 0.141 25.723);
     --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
+    --border: oklch(0.26 0.008 285);
+    --input: oklch(0.26 0.008 285);
+    --ring: oklch(0.58 0.19 25);
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
@@ -139,5 +140,64 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+@layer components {
+    .tcm-page {
+        @apply mx-auto w-full max-w-[1380px] px-4 pb-24 pt-5 sm:px-7 sm:pt-7;
+    }
+
+    .tcm-greeting {
+        @apply font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem] sm:leading-tight;
+    }
+
+    .tcm-card-title {
+        @apply text-[10.5px] font-bold tracking-[0.18em] text-muted-foreground uppercase;
+    }
+
+    .tcm-context-select {
+        @apply min-w-[11rem] max-w-[15rem] rounded-full border-border/80 bg-muted/50 shadow-none;
+    }
+
+    .tcm-list-row {
+        @apply flex items-start gap-3 border-b border-border/50 px-1 py-2.5 transition-colors last:border-0 hover:bg-muted/30;
+    }
+
+    .tcm-proj-bar-track {
+        @apply h-1 cursor-default overflow-hidden rounded-full bg-muted;
+    }
+
+    .tcm-proj-bar-fill {
+        @apply h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-[width] duration-300;
+    }
+
+    .tcm-kanban-board {
+        @apply flex w-full max-w-full gap-3 overflow-x-auto overscroll-x-contain pb-2 snap-x snap-mandatory;
+        scrollbar-gutter: stable;
+    }
+
+    .tcm-kanban-column {
+        @apply flex max-h-[min(70vh,36rem)] min-h-[12rem] w-[min(82vw,17.5rem)] shrink-0 snap-start flex-col rounded-xl border border-border/70 bg-muted/20 sm:w-[17.5rem];
+    }
+
+    .tcm-kanban-column > ul {
+        @apply min-h-0 flex-1 overflow-y-auto overscroll-y-contain;
+    }
+
+    .tcm-kanban-card {
+        @apply block rounded-lg border border-border/60 bg-card p-3 shadow-sm transition-colors hover:border-border hover:bg-muted/20;
+    }
+
+    .tcm-kanban-card--draggable {
+        @apply cursor-grab active:cursor-grabbing;
+    }
+
+    .tcm-kanban-card--dragging {
+        @apply opacity-45 ring-2 ring-primary/30;
+    }
+
+    .tcm-kanban-column--drop-target {
+        @apply border-primary/40 bg-primary/5 ring-2 ring-primary/25;
     }
 }

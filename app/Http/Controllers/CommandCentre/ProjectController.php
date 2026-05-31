@@ -7,12 +7,15 @@ use App\Http\Requests\CommandCentre\StoreProjectRequest;
 use App\Http\Requests\CommandCentre\UpdateProjectRequest;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\ProjectMember;
+use App\Models\Task;
 use App\Support\ActivityLogger;
 use App\Support\CommandCentreResourcePresenter;
 use App\Support\EffectivePermissionService;
 use App\Support\OrganizationMemberResolver;
 use App\Support\ProjectBootstrapService;
 use App\Support\ProjectVisibilityScope;
+use App\Support\TaskVisibilityScope;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -94,6 +97,34 @@ class ProjectController extends Controller
 
         abort_unless($visible, 404);
 
+        $tasks = Task::query()
+            ->forOrganization($organization->id)
+            ->where('project_id', $project->id)
+            ->with(['assignees'])
+            ->tap(fn ($builder) => app(TaskVisibilityScope::class)->apply($builder, $member))
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(fn (Task $task): array => CommandCentreResourcePresenter::task($task))
+            ->values()
+            ->all();
+
+        $team = ProjectMember::query()
+            ->where('project_id', $project->id)
+            ->with(['organizationMember', 'role'])
+            ->orderBy('joined_at')
+            ->get()
+            ->map(fn (ProjectMember $projectMember): array => [
+                'id' => $projectMember->id,
+                'display_name' => $projectMember->organizationMember?->display_name,
+                'role_name' => $projectMember->role?->name,
+            ])
+            ->values()
+            ->all();
+
+        $openTaskCount = collect($tasks)->filter(
+            fn (array $task): bool => ($task['is_done'] ?? false) === false,
+        )->count();
+
         return Inertia::render('organizations/projects/show', [
             'organization' => [
                 'id' => $organization->id,
@@ -101,6 +132,12 @@ class ProjectController extends Controller
                 'slug' => $organization->slug,
             ],
             'project' => CommandCentreResourcePresenter::project($project),
+            'tasks' => $tasks,
+            'team' => $team,
+            'taskSummary' => [
+                'open' => $openTaskCount,
+                'done' => count($tasks) - $openTaskCount,
+            ],
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member, $project),
         ]);
     }

@@ -61,7 +61,67 @@ class OrganizationMailProfileTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('organizations/settings/mail')
-                ->has('profiles'));
+                ->has('profiles')
+                ->has('mailLinkage'));
+    }
+
+    public function test_owner_can_set_default_mail_profile(): void
+    {
+        $user = User::factory()->create();
+        $organization = app(OrganizationBootstrapService::class)->create($user, [
+            'name' => 'Default Mail Org',
+        ]);
+        $member = $organization->members()->where('user_id', $user->id)->firstOrFail();
+
+        $defaultProfile = OrganizationMailProfile::query()->create([
+            'organization_id' => $organization->id,
+            'name' => 'Primary',
+            'provider' => MailProvider::Smtp,
+            'is_default' => true,
+            'from_name' => 'Primary',
+            'from_address' => 'primary@example.com',
+            'config' => [
+                'host' => 'smtp.example.com',
+                'port' => 587,
+                'encryption' => 'tls',
+                'username' => 'primary@example.com',
+                'password' => 'secret',
+            ],
+            'is_verified' => false,
+            'is_active' => true,
+            'created_by_member_id' => $member->id,
+        ]);
+
+        $secondaryProfile = OrganizationMailProfile::query()->create([
+            'organization_id' => $organization->id,
+            'name' => 'Secondary',
+            'provider' => MailProvider::Smtp,
+            'is_default' => false,
+            'from_name' => 'Secondary',
+            'from_address' => 'secondary@example.com',
+            'config' => [
+                'host' => 'smtp.example.com',
+                'port' => 587,
+                'encryption' => 'tls',
+                'username' => 'secondary@example.com',
+                'password' => 'secret',
+            ],
+            'is_verified' => false,
+            'is_active' => true,
+            'created_by_member_id' => $member->id,
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('organizations.mail-profiles.update', [$organization, $secondaryProfile]), [
+                'is_default' => true,
+            ])
+            ->assertRedirect();
+
+        $defaultProfile->refresh();
+        $secondaryProfile->refresh();
+
+        $this->assertFalse($defaultProfile->is_default);
+        $this->assertTrue($secondaryProfile->is_default);
     }
 
     public function test_test_send_logs_delivery_row_and_marks_profile_verified(): void

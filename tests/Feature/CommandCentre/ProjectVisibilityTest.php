@@ -68,7 +68,11 @@ class ProjectVisibilityTest extends TestCase
 
         $this->actingAs($memberUser)
             ->get(route('organizations.projects.show', [$organization, $visibleProject]))
-            ->assertOk();
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('tasks')
+                ->has('team')
+                ->has('taskSummary'));
 
         $hiddenProject = Project::query()
             ->where('organization_id', $organization->id)

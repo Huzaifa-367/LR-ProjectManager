@@ -45,5 +45,18 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException $exception, \Illuminate\Http\Request $request) {
+            if (! $request->header('X-Inertia')) {
+                return null;
+            }
+
+            $message = $exception->getMessage() ?: __('Too many requests. Please wait a moment and try again.');
+
+            \Inertia\Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $message,
+            ]);
+
+            return back();
+        });
     })->create();

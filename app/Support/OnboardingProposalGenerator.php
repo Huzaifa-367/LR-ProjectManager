@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 final class OnboardingProposalGenerator
 {
+    public function __construct(
+        private readonly OnboardingPlanGenerator $planGenerator,
+    ) {}
+
     /**
      * @param  list<array{organization_member_id: int, project_role_slug: string, display_name?: string}>  $team
      * @return array{
@@ -30,62 +34,28 @@ final class OnboardingProposalGenerator
         string $brief,
         array $team = [],
     ): array {
-        $projectName = $this->extractProjectName($brief) ?? __('New strategic project');
-
-        if ($team === []) {
-            $team = [[
-                'organization_member_id' => $creator->id,
-                'project_role_slug' => 'project_lead',
-                'display_name' => $creator->display_name,
-            ]];
-        }
-
+        $team = $this->normalizeTeam($creator, $team);
         $leadMemberId = (int) ($team[0]['organization_member_id'] ?? $creator->id);
+        $sanitizedBrief = Utf8::sanitize($brief);
 
-        return [
+        $structure = app(OnboardingBriefParser::class)->extractStructure($sanitizedBrief);
+        $profile = app(OnboardingProjectProfileDetector::class)->detect($sanitizedBrief, $structure);
+
+        $plan = $this->planGenerator->generate($sanitizedBrief, $leadMemberId, $profile['key']);
+
+        return Utf8::sanitizeRecursive([
             'project' => [
-                'name' => $projectName,
-                'objective' => $brief,
+                'name' => $plan['project_name'],
+                'objective' => $plan['objective'],
                 'health' => 'active',
-                'next_action' => __('Review generated task plan'),
+                'next_action' => $plan['next_action'],
                 'progress_percent' => 0,
             ],
             'team' => $team,
-            'tasks' => [
-                [
-                    'title' => __('Define scope and success criteria'),
-                    'description' => $brief,
-                    'priority' => 'high',
-                    'status' => 'pending',
-                    'deadline_type' => 'this_week',
-                    'assignee_member_ids' => [$leadMemberId],
-                    'kind' => 'task',
-                ],
-                [
-                    'title' => __('Align stakeholders on timeline'),
-                    'priority' => 'medium',
-                    'status' => 'pending',
-                    'deadline_type' => 'this_week',
-                    'assignee_member_ids' => [$leadMemberId],
-                    'kind' => 'task',
-                ],
-            ],
-            'decisions' => [
-                [
-                    'title' => __('Approve initial plan'),
-                    'sort_order' => 1,
-                    'assignee_member_ids' => [$leadMemberId],
-                ],
-            ],
-            'reminders' => [
-                [
-                    'title' => __('Weekly check-in'),
-                    'description' => __('Review progress on :project', ['project' => $projectName]),
-                    'meta' => ['icon' => '📅', 'is_urgent' => false],
-                    'assignee_member_ids' => [$leadMemberId],
-                ],
-            ],
-        ];
+            'tasks' => $plan['tasks'],
+            'decisions' => $plan['decisions'],
+            'reminders' => $plan['reminders'],
+        ]);
     }
 
     public function propose(
@@ -106,6 +76,9 @@ final class OnboardingProposalGenerator
 
             $payload = $this->buildPayload($session->organization, $creator, $brief, $team);
 
+            $taskCount = count($payload['tasks']);
+            $decisionCount = count($payload['decisions']);
+
             $proposal = AiOnboardingProposal::query()->create([
                 'ai_session_id' => $session->id,
                 'organization_id' => $session->organization_id,
@@ -113,7 +86,14 @@ final class OnboardingProposalGenerator
                 'proposal_type' => OnboardingProposalType::Project,
                 'status' => OnboardingProposalStatus::PendingReview,
                 'payload' => $payload,
-                'summary' => __('AI-generated plan for :name', ['name' => $payload['project']['name']]),
+                'summary' => Utf8::sanitize(__(
+                    'Plan for :name — :tasks tasks, :decisions decisions',
+                    [
+                        'name' => $payload['project']['name'],
+                        'tasks' => $taskCount,
+                        'decisions' => $decisionCount,
+                    ],
+                )),
                 'version' => $nextVersion,
             ]);
 
@@ -130,20 +110,39 @@ final class OnboardingProposalGenerator
         });
     }
 
-    private function extractProjectName(string $brief): ?string
+    /**
+     * @param  list<array{organization_member_id: int, project_role_slug: string, display_name?: string}>  $team
+     * @return list<array{organization_member_id: int, project_role_slug: string, display_name?: string}>
+     */
+    private function normalizeTeam(OrganizationMember $creator, array $team): array
     {
-        $trimmed = trim($brief);
-
-        if ($trimmed === '') {
-            return null;
+        if ($team === []) {
+            return [[
+                'organization_member_id' => $creator->id,
+                'project_role_slug' => 'project_lead',
+                'display_name' => Utf8::sanitize((string) $creator->display_name),
+            ]];
         }
 
-        $firstLine = strtok($trimmed, "\n") ?: $trimmed;
+        $memberIds = array_map(
+            fn (array $row): int => (int) $row['organization_member_id'],
+            $team,
+        );
 
-        if (strlen($firstLine) > 80) {
-            return substr($firstLine, 0, 77).'...';
+        if (! in_array($creator->id, $memberIds, true)) {
+            $team[] = [
+                'organization_member_id' => $creator->id,
+                'project_role_slug' => 'project_lead',
+                'display_name' => Utf8::sanitize((string) $creator->display_name),
+            ];
         }
 
-        return $firstLine;
+        return array_map(function (array $row): array {
+            if (isset($row['display_name']) && is_string($row['display_name'])) {
+                $row['display_name'] = Utf8::sanitize($row['display_name']);
+            }
+
+            return $row;
+        }, $team);
     }
 }

@@ -35,7 +35,7 @@ export function OrganizationSelector() {
                 );
             }}
         >
-            <SelectTrigger size="sm" className="min-w-[12rem] max-w-[16rem]">
+            <SelectTrigger size="sm" className="tcm-context-select">
                 <Building2 className="size-4 shrink-0 text-muted-foreground" />
                 <SelectValue placeholder="Select organization" />
             </SelectTrigger>

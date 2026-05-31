@@ -1,19 +1,15 @@
 import ProjectController from '@/actions/App/Http/Controllers/CommandCentre/ProjectController';
-import { Head, Link, router } from '@inertiajs/react';
-import { FolderKanban, Plus } from 'lucide-react';
-import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
+import ProjectOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/ProjectOnboardingController';
+import { Head, Link } from '@inertiajs/react';
+import { FolderKanban, Sparkles } from 'lucide-react';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { CreateProjectDialog } from '@/components/command-centre/create-project-dialog';
+import { EmptyState } from '@/components/command-centre/empty-state';
+import { PageShell } from '@/components/command-centre/page-shell';
+import { StatusPill } from '@/components/command-centre/status-pill';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { canOrg } from '@/hooks/use-org-permissions';
+import { useOrganizationContext } from '@/hooks/use-organization-context';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
@@ -34,144 +30,102 @@ type ProjectsIndexProps = {
     permissions: CommandCentrePermissions;
 };
 
-const healthVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
-    active: 'default',
-    progressing: 'secondary',
-    steady: 'outline',
-};
-
 export default function ProjectsIndex({
     organization,
     projects,
     permissions,
 }: ProjectsIndexProps) {
+    const { aiEnabled } = useOrganizationContext();
     const canCreate = canOrg(permissions.org, 'org.projects.store');
+    const canStartOnboarding =
+        aiEnabled && canOrg(permissions.org, 'org.ai-onboarding.start');
 
     return (
         <>
             <Head title="Projects" />
-            <div className="flex flex-col gap-6 p-6">
-                <div className="flex items-start justify-between gap-4">
-                    <Heading
-                        title={`Projects · ${organization.name}`}
-                        description="Track initiatives across your organization."
-                    />
-                </div>
-
-                {canCreate && (
-                    <Card className="max-w-xl">
-                        <CardHeader>
-                            <CardTitle>Create project</CardTitle>
-                            <CardDescription>
-                                Bootstrap a project with default roles and add
-                                yourself as project owner.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form
-                                className="flex flex-col gap-4"
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    const form = event.currentTarget;
-                                    const formData = new FormData(form);
-
-                                    router.post(
-                                        ProjectController.store.url(
-                                            organization.id,
-                                        ),
-                                        {
-                                            name: formData.get('name'),
-                                            objective: formData.get(
-                                                'objective',
-                                            ),
-                                        },
-                                    );
-                                }}
+            <PageShell
+                title="Projects"
+                subtitle={organization.name}
+                stats={[
+                    { label: 'Active', value: projects.length },
+                ]}
+                actions={
+                    <div className="flex flex-wrap gap-2">
+                        {canStartOnboarding && (
+                            <Button asChild variant="secondary" size="sm">
+                                <Link
+                                    href={ProjectOnboardingController.create.url(
+                                        organization.id,
+                                    )}
+                                >
+                                    <Sparkles className="size-4" />
+                                    AI onboarding
+                                </Link>
+                            </Button>
+                        )}
+                        {canCreate && (
+                            <CreateProjectDialog
+                                organizationId={organization.id}
+                            />
+                        )}
+                    </div>
+                }
+            >
+                {projects.length === 0 ? (
+                    <CommandCard title="No projects yet" dot="gold">
+                        <EmptyState>
+                            {canStartOnboarding
+                                ? 'Start with AI onboarding to draft a project plan, or create one manually.'
+                                : canCreate
+                                  ? 'Create your first project to start tracking work.'
+                                  : 'No projects are visible in your scope.'}
+                        </EmptyState>
+                        {canStartOnboarding && (
+                            <Button asChild className="mt-4" size="sm">
+                                <Link
+                                    href={ProjectOnboardingController.create.url(
+                                        organization.id,
+                                    )}
+                                >
+                                    <Sparkles className="size-4" />
+                                    Open AI onboarding
+                                </Link>
+                            </Button>
+                        )}
+                    </CommandCard>
+                ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {projects.map((project) => (
+                            <Link
+                                key={project.id}
+                                href={ProjectController.show.url([
+                                    organization.id,
+                                    project.id,
+                                ])}
+                                className="group rounded-xl border border-border/70 bg-card p-4 transition-colors hover:border-border hover:bg-muted/20"
                             >
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        required
-                                        placeholder="Q3 launch"
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="objective">Objective</Label>
-                                    <Input
-                                        id="objective"
-                                        name="objective"
-                                        placeholder="What does success look like?"
-                                    />
-                                </div>
-                                <Button type="submit">
-                                    <Plus className="size-4" />
-                                    Create project
-                                </Button>
-                            </form>
-                        </CardContent>
-                    </Card>
-                )}
-
-                <div className="grid gap-3">
-                    {projects.length === 0 ? (
-                        <Card>
-                            <CardContent className="p-6 text-sm text-muted-foreground">
-                                No projects yet.
-                                {canCreate
-                                    ? ' Create one above to get started.'
-                                    : ''}
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        projects.map((project) => (
-                            <Card key={project.id}>
-                                <CardContent className="flex items-center justify-between gap-4 p-4">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                                            <FolderKanban className="size-5 text-muted-foreground" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="truncate font-medium">
-                                                {project.name}
-                                            </p>
-                                            {project.objective && (
-                                                <p className="truncate text-sm text-muted-foreground">
-                                                    {project.objective}
-                                                </p>
-                                            )}
-                                            <div className="mt-1 flex flex-wrap gap-2">
-                                                <Badge
-                                                    variant={
-                                                        healthVariant[
-                                                            project.health
-                                                        ] ?? 'outline'
-                                                    }
-                                                >
-                                                    {project.health}
-                                                </Badge>
-                                                <Badge variant="outline">
-                                                    {project.progress_percent}%
-                                                </Badge>
-                                            </div>
-                                        </div>
+                                <div className="mb-3 flex items-start justify-between gap-2">
+                                    <div className="flex size-9 items-center justify-center rounded-lg bg-muted/60">
+                                        <FolderKanban className="size-4 text-muted-foreground" />
                                     </div>
-                                    <Button asChild variant="outline">
-                                        <Link
-                                            href={ProjectController.show.url(
-                                                [organization.id, project.id],
-                                            )}
-                                        >
-                                            Open
-                                        </Link>
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))
-                    )}
-                </div>
-            </div>
+                                    <StatusPill status={project.health} />
+                                </div>
+                                <p className="font-medium group-hover:text-primary">
+                                    {project.name}
+                                </p>
+                                {project.objective && (
+                                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                        {project.objective}
+                                    </p>
+                                )}
+                                <p className="mt-3 text-[11px] font-semibold text-muted-foreground">
+                                    {project.progress_percent}% complete
+                                </p>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </PageShell>
         </>
     );
 }

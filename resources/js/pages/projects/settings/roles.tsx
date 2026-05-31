@@ -1,8 +1,9 @@
 import ProjectController from '@/actions/App/Http/Controllers/CommandCentre/ProjectController';
 import { Head, Link } from '@inertiajs/react';
-import Heading from '@/components/heading';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { PageShell } from '@/components/command-centre/page-shell';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { OrganizationSummary } from '@/types/organization';
 
 type ProjectRoleItem = {
@@ -31,45 +32,45 @@ export default function ProjectRolesSettings({
     return (
         <>
             <Head title={`Roles · ${project.name}`} />
-            <div className="flex flex-col gap-6 p-6">
-                <Heading
-                    title={`Project roles · ${project.name}`}
-                    description="Default roles created at project bootstrap. Permission sync UI arrives in a later milestone."
-                />
-
-                <div className="grid gap-3">
+            <PageShell
+                title={`Project roles · ${project.name}`}
+                subtitle={organization.name}
+                stats={[{ label: 'Roles', value: roles.length }]}
+                actions={
+                    <Button asChild variant="outline" size="sm">
+                        <Link
+                            href={ProjectController.show.url([
+                                organization.id,
+                                project.id,
+                            ])}
+                        >
+                            Back to project
+                        </Link>
+                    </Button>
+                }
+            >
+                <div className="grid gap-4">
                     {roles.map((role) => (
-                        <Card key={role.id}>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    {role.name}
-                                    {role.is_default && (
-                                        <Badge variant="secondary">
-                                            Default
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">
-                                    {role.permissions.length} permissions · slug{' '}
-                                    <code>{role.slug}</code>
-                                </p>
-                            </CardContent>
-                        </Card>
+                        <CommandCard
+                            key={role.id}
+                            title={role.name}
+                            dot={role.is_default ? 'gold' : 'blue'}
+                            badge={
+                                role.is_default ? (
+                                    <Badge variant="secondary">Default</Badge>
+                                ) : undefined
+                            }
+                        >
+                            <p className="text-sm text-muted-foreground">
+                                {role.permissions.length} permissions · slug{' '}
+                                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                                    {role.slug}
+                                </code>
+                            </p>
+                        </CommandCard>
                     ))}
                 </div>
-
-                <Link
-                    href={ProjectController.show.url([
-                        organization.id,
-                        project.id,
-                    ])}
-                    className="text-sm underline underline-offset-4"
-                >
-                    Back to project
-                </Link>
-            </div>
+            </PageShell>
         </>
     );
 }

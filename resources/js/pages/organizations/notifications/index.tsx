@@ -1,15 +1,10 @@
 import NotificationController from '@/actions/App/Http/Controllers/NotificationController';
 import NotificationPreferenceController from '@/actions/App/Http/Controllers/NotificationPreferenceController';
 import { Head, Link, router } from '@inertiajs/react';
-import Heading from '@/components/heading';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { EmptyState } from '@/components/command-centre/empty-state';
+import { PageShell } from '@/components/command-centre/page-shell';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { CommandCentrePermissions, OrganizationSummary } from '@/types/organization';
 
@@ -32,6 +27,9 @@ export default function NotificationsIndex({
     organization,
     notifications,
 }: NotificationsIndexProps) {
+    const unreadCount = notifications.filter(
+        (notification) => notification.read_at === null,
+    ).length;
     const unreadIds = notifications
         .filter((notification) => notification.read_at === null)
         .map((notification) => notification.id);
@@ -51,25 +49,26 @@ export default function NotificationsIndex({
     return (
         <>
             <Head title={`Notifications · ${organization.name}`} />
-            <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Notifications"
-                        description={`Updates for ${organization.name}.`}
-                    />
-                    <div className="flex flex-wrap gap-3 text-sm">
-                        <Link
-                            href={NotificationPreferenceController.show.url(
-                                organization.id,
-                            )}
-                            className="underline underline-offset-4"
-                        >
-                            Preferences
-                        </Link>
+            <PageShell
+                title="Notifications"
+                subtitle={organization.name}
+                stats={[
+                    { label: 'Unread', value: unreadCount, tone: 'accent' },
+                ]}
+                actions={
+                    <div className="flex flex-wrap gap-2">
+                        <Button asChild variant="outline" size="sm">
+                            <Link
+                                href={NotificationPreferenceController.show.url(
+                                    organization.id,
+                                )}
+                            >
+                                Preferences
+                            </Link>
+                        </Button>
                         {unreadIds.length > 0 && (
                             <Button
                                 type="button"
-                                variant="outline"
                                 size="sm"
                                 onClick={markAllRead}
                             >
@@ -77,35 +76,31 @@ export default function NotificationsIndex({
                             </Button>
                         )}
                     </div>
-                </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>In-app notifications</CardTitle>
-                        <CardDescription>
-                            Task assignments, reminders, and workspace updates.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="divide-y">
-                        {notifications.length === 0 ? (
-                            <p className="py-6 text-sm text-muted-foreground">
-                                No notifications yet.
-                            </p>
-                        ) : (
-                            notifications.map((notification) => (
-                                <div
+                }
+            >
+                <CommandCard
+                    title="In-app notifications"
+                    description="Task assignments, reminders, and workspace updates."
+                    dot="blue"
+                >
+                    {notifications.length === 0 ? (
+                        <EmptyState>No notifications yet.</EmptyState>
+                    ) : (
+                        <ul className="divide-y divide-border/50">
+                            {notifications.map((notification) => (
+                                <li
                                     key={notification.id}
                                     className={cn(
-                                        'flex flex-col gap-1 py-4 first:pt-0 last:pb-0',
+                                        'py-3',
                                         notification.read_at === null &&
-                                            'rounded-md bg-accent/30 px-3 -mx-3',
+                                            'rounded-lg bg-primary/5 px-3 -mx-1',
                                     )}
                                 >
                                     <div className="font-medium">
                                         {notification.action_url ? (
                                             <Link
                                                 href={notification.action_url}
-                                                className="hover:underline"
+                                                className="hover:text-primary hover:underline"
                                             >
                                                 {notification.title}
                                             </Link>
@@ -121,12 +116,12 @@ export default function NotificationsIndex({
                                             notification.created_at,
                                         ).toLocaleString()}
                                     </time>
-                                </div>
-                            ))
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </CommandCard>
+            </PageShell>
         </>
     );
 }

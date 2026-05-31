@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers\CommandCentre;
 
-use App\Enums\AiSessionContext;
-use App\Enums\AiSessionStatus;
+use App\Enums\AiMessageRole;
 use App\Enums\OnboardingProposalStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AiOnboardingProposal;
@@ -12,7 +11,12 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Support\CommandCentreResourcePresenter;
 use App\Support\EffectivePermissionService;
+use App\Support\OnboardingBriefAnalyzer;
+use App\Support\OnboardingConversationComposer;
+use App\Support\OnboardingRequirementRegistry;
+use App\Support\OnboardingSessionService;
 use App\Support\OrganizationMemberResolver;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,12 +26,19 @@ class ProjectOnboardingController extends Controller
         Organization $organization,
         OrganizationMemberResolver $memberResolver,
         EffectivePermissionService $permissions,
+        OnboardingConversationComposer $conversationComposer,
+        OnboardingBriefAnalyzer $briefAnalyzer,
+        OnboardingSessionService $onboardingSessionService,
     ): Response {
         $member = $memberResolver->requireForOrganization(request()->user(), $organization);
 
         abort_unless($permissions->memberCan($member, 'org.ai-onboarding.start'), 403);
 
-        $session = $this->resolveOrCreateSession($organization, $member, request()->user()->id);
+        $session = $onboardingSessionService->resolveOrCreateActive(
+            $organization,
+            $member,
+            request()->user()->id,
+        );
 
         $members = OrganizationMember::query()
             ->where('organization_id', $organization->id)
@@ -50,6 +61,17 @@ class ProjectOnboardingController extends Controller
             ->orderByDesc('version')
             ->first();
 
+        $composedBrief = $conversationComposer->compose($session, '', []);
+        $hasPriorSubmission = $session->messages()
+            ->where('role', AiMessageRole::User)
+            ->exists();
+        $contextAssessment = $briefAnalyzer->assess($composedBrief, 0, $hasPriorSubmission);
+        $pendingQuestions = $this->resolvePendingQuestions($session);
+
+        if ($pendingQuestions !== null && ! $contextAssessment['is_complete']) {
+            $contextAssessment = $pendingQuestions;
+        }
+
         return Inertia::render('organizations/projects/onboarding', [
             'organization' => [
                 'id' => $organization->id,
@@ -61,33 +83,71 @@ class ProjectOnboardingController extends Controller
             'proposal' => $latestProposal
                 ? CommandCentreResourcePresenter::onboardingProposal($latestProposal)
                 : null,
+            'conversation' => $session->messages()
+                ->orderBy('id')
+                ->get()
+                ->map(fn ($message): array => [
+                    'id' => $message->id,
+                    'role' => $message->role->value,
+                    'content' => $message->content,
+                ])
+                ->values()
+                ->all(),
+            'contextAssessment' => $contextAssessment,
+            'requirements' => OnboardingRequirementRegistry::definitions(),
+            'wizardSteps' => OnboardingRequirementRegistry::wizardSteps(),
+            'initialPastePlaceholder' => OnboardingRequirementRegistry::initialPastePlaceholder(),
+            'initialPasteGuide' => OnboardingRequirementRegistry::initialPasteGuide(),
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member),
         ]);
     }
 
-    private function resolveOrCreateSession(
+    public function reset(
         Organization $organization,
-        OrganizationMember $member,
-        int $userId,
-    ): AiSession {
-        $existing = AiSession::query()
-            ->where('organization_id', $organization->id)
-            ->where('organization_member_id', $member->id)
-            ->where('context', AiSessionContext::ProjectOnboarding)
-            ->where('status', AiSessionStatus::Active)
-            ->latest('id')
+        OrganizationMemberResolver $memberResolver,
+        EffectivePermissionService $permissions,
+        OnboardingSessionService $onboardingSessionService,
+    ): RedirectResponse {
+        $member = $memberResolver->requireForOrganization(request()->user(), $organization);
+
+        abort_unless($permissions->memberCan($member, 'org.ai-onboarding.start'), 403);
+
+        $onboardingSessionService->startFresh(
+            $organization,
+            $member,
+            request()->user()->id,
+        );
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __('Onboarding session reset. You can start a new project brief.'),
+        ]);
+
+        return to_route('organizations.projects.onboarding', $organization);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolvePendingQuestions(AiSession $session): ?array
+    {
+        $latestAssistant = $session->messages()
+            ->where('role', AiMessageRole::Assistant)
+            ->orderByDesc('id')
             ->first();
 
-        if ($existing !== null) {
-            return $existing;
+        if ($latestAssistant === null) {
+            return null;
         }
 
-        return AiSession::query()->create([
-            'organization_id' => $organization->id,
-            'organization_member_id' => $member->id,
-            'user_id' => $userId,
-            'context' => AiSessionContext::ProjectOnboarding,
-            'status' => AiSessionStatus::Active,
-        ]);
+        $actions = $latestAssistant->proposed_actions;
+
+        if (! is_array($actions) || ($actions['type'] ?? null) !== 'onboarding_context_questions') {
+            return null;
+        }
+
+        $assessment = $actions['assessment'] ?? null;
+
+        return is_array($assessment) ? $assessment : null;
     }
 }

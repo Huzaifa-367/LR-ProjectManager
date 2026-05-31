@@ -7,6 +7,7 @@ use App\Enums\NotificationChannel;
 use App\Http\Requests\Organizations\StoreOrganizationMailProfileRequest;
 use App\Http\Requests\Organizations\UpdateOrganizationMailProfileRequest;
 use App\Mail\TestOrganizationMailProfileMail;
+use App\Models\MemberMailLinkage;
 use App\Models\NotificationDelivery;
 use App\Models\Organization;
 use App\Models\OrganizationMailProfile;
@@ -31,16 +32,26 @@ class OrganizationMailProfileController extends Controller
     ): Response {
         $member = $memberResolver->requireForOrganization(request()->user(), $organization);
 
-        abort_unless($permissions->memberCan($member, 'org.mail-profiles.index'), 403);
+        abort_unless(
+            $permissions->memberCan($member, 'org.mail-profiles.index')
+            || $permissions->memberCan($member, 'org.member-mail-linkage.show'),
+            403,
+        );
 
-        $profiles = OrganizationMailProfile::query()
-            ->where('organization_id', $organization->id)
-            ->orderByDesc('is_default')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (OrganizationMailProfile $profile): array => $this->presentProfile($profile))
-            ->values()
-            ->all();
+        $profiles = $permissions->memberCan($member, 'org.mail-profiles.index')
+            ? OrganizationMailProfile::query()
+                ->where('organization_id', $organization->id)
+                ->orderByDesc('is_default')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (OrganizationMailProfile $profile): array => $this->presentProfile($profile))
+                ->values()
+                ->all()
+            : [];
+
+        $mailLinkage = MemberMailLinkage::query()
+            ->where('organization_member_id', $member->id)
+            ->first();
 
         return Inertia::render('organizations/settings/mail', [
             'organization' => [
@@ -48,6 +59,12 @@ class OrganizationMailProfileController extends Controller
                 'name' => $organization->name,
             ],
             'profiles' => $profiles,
+            'mailLinkage' => [
+                'gmail_address' => $mailLinkage?->gmail_address,
+                'is_verified' => $mailLinkage?->is_verified ?? false,
+                'last_tested_at' => $mailLinkage?->last_tested_at?->toIso8601String(),
+                'has_app_pin' => $mailLinkage !== null,
+            ],
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member),
         ]);
     }

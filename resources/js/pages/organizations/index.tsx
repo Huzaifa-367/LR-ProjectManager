@@ -1,16 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Building2, Plus } from 'lucide-react';
-import Heading from '@/components/heading';
+import { Building2 } from 'lucide-react';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { CreateOrganizationDialog } from '@/components/command-centre/create-organization-dialog';
+import { EmptyState } from '@/components/command-centre/empty-state';
+import { PageShell } from '@/components/command-centre/page-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { create, index, select } from '@/routes/organizations';
+import { index, select } from '@/routes/organizations';
 import type { OrganizationListItem } from '@/types/organization';
 
 type OrganizationsIndexProps = {
@@ -44,45 +40,38 @@ export default function OrganizationsIndex({
     return (
         <>
             <Head title="Organizations" />
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-                <div className="flex items-start justify-between gap-4">
-                    <Heading
-                        title="Organizations"
-                        description="Choose a workspace or create a new organization."
-                    />
-                    <Button asChild>
-                        <Link href={create.url()}>
-                            <Plus className="size-4" />
-                            Create organization
-                        </Link>
-                    </Button>
-                </div>
-
+            <PageShell
+                title="Organizations"
+                subtitle="Choose a workspace or create a new one."
+                stats={[
+                    {
+                        label: 'Workspaces',
+                        value: organizations.length,
+                    },
+                ]}
+                actions={<CreateOrganizationDialog />}
+            >
                 {!hasOrganizations ? (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>No organizations yet</CardTitle>
-                            <CardDescription>
-                                Create your first organization to open the
-                                command centre.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Button asChild>
-                                <Link href={create.url()}>
-                                    Create organization
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <CommandCard title="Get started" dot="crimson">
+                        <EmptyState>
+                            Create your first organization to open the command
+                            centre.
+                        </EmptyState>
+                        <div className="flex justify-center pb-2">
+                            <CreateOrganizationDialog />
+                        </div>
+                    </CommandCard>
                 ) : (
-                    <div className="grid gap-3">
-                        {organizations.map((organization) => (
-                            <Card key={organization.id}>
-                                <CardContent className="flex items-center justify-between gap-4 p-4">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                                            <Building2 className="size-5 text-muted-foreground" />
+                    <CommandCard title="Your workspaces" dot="blue">
+                        <ul className="divide-y divide-border/50">
+                            {organizations.map((organization) => (
+                                <li
+                                    key={organization.id}
+                                    className="tcm-list-row items-center"
+                                >
+                                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted/60">
+                                            <Building2 className="size-4 text-muted-foreground" />
                                         </div>
                                         <div className="min-w-0">
                                             <p className="truncate font-medium">
@@ -102,47 +91,49 @@ export default function OrganizationsIndex({
                                             </div>
                                         </div>
                                     </div>
-                                    {organization.member_status ===
-                                    'active' ? (
+                                    {organization.member_status === 'active' ? (
                                         <Button
+                                            size="sm"
                                             onClick={() => {
-                                                router.post(
-                                                    select.url(),
-                                                    {
-                                                        organization_id:
-                                                            organization.id,
-                                                    },
-                                                );
+                                                router.post(select.url(), {
+                                                    organization_id:
+                                                        organization.id,
+                                                });
                                             }}
                                         >
                                             Open
                                         </Button>
                                     ) : (
-                                        <Button variant="outline" disabled>
-                                            Pending invite
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled
+                                        >
+                                            Pending
                                         </Button>
                                     )}
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </CommandCard>
                 )}
 
                 {pendingInvitations.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Pending invitations</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm text-muted-foreground">
+                    <CommandCard title="Pending invitations" dot="gold">
+                        <ul className="divide-y divide-border/50">
                             {pendingInvitations.map((invitation) => (
-                                <div
+                                <li
                                     key={invitation.id}
-                                    className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                                    className="tcm-list-row items-center justify-between"
                                 >
-                                    <p>
-                                        {invitation.organization_name} ·{' '}
-                                        {invitation.role_name}
-                                    </p>
+                                    <div>
+                                        <p className="text-sm font-medium">
+                                            {invitation.organization_name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {invitation.role_name}
+                                        </p>
+                                    </div>
                                     <Button
                                         size="sm"
                                         onClick={() => {
@@ -151,21 +142,21 @@ export default function OrganizationsIndex({
                                     >
                                         Accept
                                     </Button>
-                                </div>
+                                </li>
                             ))}
-                        </CardContent>
-                    </Card>
+                        </ul>
+                    </CommandCard>
                 )}
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-center text-xs text-muted-foreground">
                     <Link
                         href={index.url()}
-                        className="underline underline-offset-4"
+                        className="underline-offset-4 hover:underline"
                     >
-                        Refresh this list
+                        Refresh list
                     </Link>
                 </p>
-            </div>
+            </PageShell>
         </>
     );
 }

@@ -1,21 +1,20 @@
 import MemberDailyFocusController from '@/actions/App/Http/Controllers/CommandCentre/MemberDailyFocusController';
-import MemberNoteController from '@/actions/App/Http/Controllers/CommandCentre/MemberNoteController';
+import ProjectOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/ProjectOnboardingController';
 import TaskController from '@/actions/App/Http/Controllers/CommandCentre/TaskController';
-import { Head, Link, router } from '@inertiajs/react';
-import { Check, Pin, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { CreateNoteDialog } from '@/components/command-centre/create-note-dialog';
+import { CreateTaskDialog } from '@/components/command-centre/create-task-dialog';
+import { EmptyState } from '@/components/command-centre/empty-state';
+import { FilterPill } from '@/components/command-centre/filter-pill';
+import { PageShell } from '@/components/command-centre/page-shell';
+import { StatusPill } from '@/components/command-centre/status-pill';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { canOrg } from '@/hooks/use-org-permissions';
 import type { CommandCentrePageProps } from '@/types/command-centre';
+import { Head, Link, router } from '@inertiajs/react';
+import { Check, Pin, Sparkles, Trash2 } from 'lucide-react';
+import { useOrganizationContext } from '@/hooks/use-organization-context';
 
 export default function CommandCentreIndex(props: CommandCentrePageProps) {
     const {
@@ -34,88 +33,98 @@ export default function CommandCentreIndex(props: CommandCentrePageProps) {
         filters,
     } = props;
 
-    const [noteBody, setNoteBody] = useState('');
-
     const activeFocusCount = focusPins.filter((pin) => !pin.task.is_done).length;
+    const projectOptions = projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+    }));
+    const canCreateTask = canOrg(permissions.org, 'org.tasks.store');
+    const canCreateNote = canOrg(permissions.org, 'org.notes.store');
+    const { aiEnabled } = useOrganizationContext();
+    const canStartOnboarding =
+        aiEnabled && canOrg(permissions.org, 'org.ai-onboarding.start');
 
     return (
         <>
             <Head title="Command Centre" />
-            <div className="flex flex-col gap-6 p-4 pb-20 sm:p-6">
-                <section className="flex flex-col gap-4 border-b pb-6 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Good day,{' '}
-                            <span className="text-primary">
-                                {currentMember.display_name}
-                            </span>
-                        </h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {organization.name} command centre
-                        </p>
-                    </div>
-                    <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <Stat label="Priorities" value={stats.active_focus} />
-                        <Stat label="Open tasks" value={stats.open_tasks} />
-                        <Stat label="Projects" value={stats.projects} />
-                        <Stat
-                            label="Done today"
-                            value={stats.done_today}
-                            accent
-                        />
-                    </dl>
-                </section>
-
-                <div className="grid gap-6 xl:grid-cols-[minmax(280px,380px)_1fr]">
-                    <div className="flex flex-col gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Assigned to me</CardTitle>
-                                <CardDescription>
-                                    Open tasks where you are an assignee.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                {assignedToMe.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">
-                                        Nothing assigned right now.
-                                    </p>
-                                ) : (
-                                    assignedToMe.map((task) => (
-                                        <TaskRow
-                                            key={task.id}
-                                            organizationId={organization.id}
-                                            task={task}
-                                            permissions={permissions.org}
-                                        />
-                                    ))
+            <PageShell
+                title="Good day,"
+                accent={currentMember.display_name}
+                subtitle={organization.name}
+                stats={[
+                    { label: 'Priorities', value: stats.active_focus },
+                    { label: 'Open tasks', value: stats.open_tasks },
+                    { label: 'Projects', value: stats.projects },
+                    {
+                        label: 'Done today',
+                        value: stats.done_today,
+                        tone: 'success',
+                    },
+                ]}
+                actions={
+                    canStartOnboarding ? (
+                        <Button asChild variant="outline" size="sm">
+                            <Link
+                                href={ProjectOnboardingController.create.url(
+                                    organization.id,
                                 )}
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex-row items-center justify-between space-y-0">
-                                <div>
-                                    <CardTitle>Today&apos;s priorities</CardTitle>
-                                    <CardDescription>
-                                        {activeFocusCount}/{focusCap} focus
-                                        pins
-                                    </CardDescription>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                {focusPins.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">
-                                        Pin tasks from your list or set a
-                                        deadline to today.
-                                    </p>
-                                ) : (
-                                    focusPins.map((pin, index) => (
-                                        <div
-                                            key={pin.id}
-                                            className="flex items-start gap-2 rounded-md border p-2"
+                            >
+                                <Sparkles className="size-4" />
+                                AI onboarding
+                            </Link>
+                        </Button>
+                    ) : undefined
+                }
+            >
+                <div className="grid gap-[18px] xl:grid-cols-[380px_1fr]">
+                    <div className="flex flex-col gap-[18px]">
+                        <CommandCard
+                            title="Assigned to me"
+                            description="Open tasks where you are an assignee."
+                            dot="blue"
+                        >
+                            {assignedToMe.length === 0 ? (
+                                <EmptyState>
+                                    Nothing assigned right now.
+                                </EmptyState>
+                            ) : (
+                                <ul className="divide-y divide-border/50">
+                                    {assignedToMe.map((task) => (
+                                        <li
+                                            key={task.id}
+                                            className="tcm-list-row"
                                         >
-                                            <span className="mt-0.5 text-xs font-semibold text-muted-foreground">
+                                            <TaskRow
+                                                organizationId={
+                                                    organization.id
+                                                }
+                                                task={task}
+                                                permissions={permissions.org}
+                                            />
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CommandCard>
+
+                        <CommandCard
+                            title="Today's priorities"
+                            description={`${activeFocusCount}/${focusCap} focus pins`}
+                            dot="crimson"
+                        >
+                            {focusPins.length === 0 ? (
+                                <EmptyState>
+                                    Pin tasks from your list or set a deadline
+                                    to today.
+                                </EmptyState>
+                            ) : (
+                                <ul className="divide-y divide-border/50">
+                                    {focusPins.map((pin, index) => (
+                                        <li
+                                            key={pin.id}
+                                            className="tcm-list-row"
+                                        >
+                                            <span className="mt-0.5 w-4 shrink-0 text-xs font-semibold text-muted-foreground">
                                                 {index + 1}
                                             </span>
                                             <div className="min-w-0 flex-1">
@@ -131,7 +140,7 @@ export default function CommandCentreIndex(props: CommandCentrePageProps) {
                                                         : ''}
                                                 </p>
                                             </div>
-                                            <div className="flex gap-1">
+                                            <div className="flex shrink-0 gap-1">
                                                 {canOrg(
                                                     permissions.org,
                                                     'org.tasks.toggle-done',
@@ -178,271 +187,193 @@ export default function CommandCentreIndex(props: CommandCentrePageProps) {
                                                     </Button>
                                                 )}
                                             </div>
-                                        </div>
-                                    ))
-                                )}
-                            </CardContent>
-                        </Card>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CommandCard>
 
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Reminders</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                {reminders.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">
-                                        No reminders due.
-                                    </p>
-                                ) : (
-                                    reminders.map((reminder) => (
-                                        <div
+                        <CommandCard title="Reminders" dot="gold">
+                            {reminders.length === 0 ? (
+                                <EmptyState>No reminders due.</EmptyState>
+                            ) : (
+                                <ul className="divide-y divide-border/50">
+                                    {reminders.map((reminder) => (
+                                        <li
                                             key={reminder.id}
-                                            className="rounded-md border p-2 text-sm"
+                                            className="tcm-list-row text-sm"
                                         >
                                             {reminder.title}
-                                        </div>
-                                    ))
-                                )}
-                            </CardContent>
-                        </Card>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CommandCard>
 
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Notes</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                {notes.map((note) => (
-                                    <div
-                                        key={note.id}
-                                        className="rounded-md border p-2 text-sm"
-                                    >
-                                        {note.body}
-                                    </div>
-                                ))}
-                                {canOrg(
-                                    permissions.org,
-                                    'org.notes.store',
-                                ) && (
-                                    <form
-                                        className="flex gap-2"
-                                        onSubmit={(event) => {
-                                            event.preventDefault();
-                                            router.post(
-                                                MemberNoteController.store.url(
-                                                    organization.id,
-                                                ),
-                                                { body: noteBody },
-                                                {
-                                                    onSuccess: () =>
-                                                        setNoteBody(''),
-                                                },
-                                            );
-                                        }}
-                                    >
-                                        <Input
-                                            value={noteBody}
-                                            onChange={(event) =>
-                                                setNoteBody(
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="Add a note…"
-                                        />
-                                        <Button type="submit" size="icon">
-                                            <Plus className="size-4" />
-                                        </Button>
-                                    </form>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <CommandCard
+                            title="Notes"
+                            dot="green"
+                            action={
+                                canCreateNote ? (
+                                    <CreateNoteDialog
+                                        organizationId={organization.id}
+                                    />
+                                ) : undefined
+                            }
+                        >
+                            {notes.length === 0 ? (
+                                <EmptyState>No notes yet.</EmptyState>
+                            ) : (
+                                <ul className="divide-y divide-border/50">
+                                    {notes.map((note) => (
+                                        <li
+                                            key={note.id}
+                                            className="tcm-list-row text-sm"
+                                        >
+                                            {note.body}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </CommandCard>
                     </div>
 
-                    <div className="flex flex-col gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Tasks</CardTitle>
-                                <CardDescription>
-                                    Filter by teammate. Use the project
-                                    selector in the header to narrow by
-                                    project.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="flex flex-wrap gap-2">
-                                    <FilterButton
-                                        label="Everyone"
+                    <div className="flex flex-col gap-[18px]">
+                        <CommandCard
+                            title="Tasks"
+                            description="Filter by teammate. Use the project selector in the header to narrow by project."
+                            dot="crimson"
+                            action={
+                                canCreateTask &&
+                                projectOptions.length > 0 ? (
+                                    <CreateTaskDialog
+                                        organizationId={organization.id}
+                                        projects={projectOptions}
+                                    />
+                                ) : undefined
+                            }
+                        >
+                            <div className="mb-3 flex flex-wrap gap-2">
+                                <FilterPill
+                                    label="Everyone"
+                                    active={
+                                        filters.assignee_member_id === null
+                                    }
+                                    onClick={() =>
+                                        applyFilters(organization.id, {
+                                            assignee_member_id: null,
+                                        })
+                                    }
+                                />
+                                {members.map((member) => (
+                                    <FilterPill
+                                        key={member.id}
+                                        label={member.display_name}
                                         active={
-                                            filters.assignee_member_id === null
+                                            filters.assignee_member_id ===
+                                            member.id
                                         }
                                         onClick={() =>
                                             applyFilters(organization.id, {
-                                                assignee_member_id: null,
+                                                assignee_member_id:
+                                                    member.id,
                                             })
                                         }
                                     />
-                                    {members.map((member) => (
-                                        <FilterButton
-                                            key={member.id}
-                                            label={member.display_name}
-                                            active={
-                                                filters.assignee_member_id ===
-                                                member.id
-                                            }
-                                            onClick={() =>
-                                                applyFilters(organization.id, {
-                                                    assignee_member_id:
-                                                        member.id,
-                                                })
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                                <div className="space-y-2">
-                                    {tasks.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground">
-                                            No tasks in this view.
-                                        </p>
-                                    ) : (
-                                        tasks.map((task) => (
-                                            <div
-                                                key={task.id}
-                                                className="flex items-center gap-2 rounded-md border p-2"
-                                            >
-                                                <div className="min-w-0 flex-1">
-                                                    <TaskRow
-                                                        organizationId={
-                                                            organization.id
-                                                        }
-                                                        task={task}
-                                                        permissions={
-                                                            permissions.org
-                                                        }
-                                                    />
-                                                </div>
-                                                {canOrg(
-                                                    permissions.org,
-                                                    'org.focus.store',
-                                                ) &&
-                                                    !task.is_done && (
-                                                        <Button
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            className="size-7 shrink-0"
-                                                            onClick={() => {
-                                                                router.post(
-                                                                    MemberDailyFocusController.store.url(
-                                                                        organization.id,
-                                                                    ),
-                                                                    {
-                                                                        task_id:
-                                                                            task.id,
-                                                                        focus_date:
-                                                                            filters.focus_date,
-                                                                    },
-                                                                );
-                                                            }}
-                                                        >
-                                                            <Pin className="size-4" />
-                                                        </Button>
-                                                    )}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Strategic projects</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                    {projects.map((project) => (
-                                        <Link
-                                            key={project.id}
-                                            href={`/organizations/${organization.id}/projects/${project.id}`}
-                                            className="rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                ))}
+                            </div>
+                            {tasks.length === 0 ? (
+                                <EmptyState>
+                                    No tasks in this view.
+                                </EmptyState>
+                            ) : (
+                                <ul className="divide-y divide-border/50">
+                                    {tasks.map((task) => (
+                                        <li
+                                            key={task.id}
+                                            className="tcm-list-row"
                                         >
-                                            <p className="font-medium">
-                                                {project.name}
-                                            </p>
-                                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                                                {project.objective}
-                                            </p>
-                                            <div className="mt-2 flex gap-2">
-                                                <Badge variant="outline">
-                                                    {project.health}
-                                                </Badge>
-                                                <Badge variant="secondary">
-                                                    {project.progress_percent}%
-                                                </Badge>
-                                            </div>
-                                        </Link>
+                                            <TaskRow
+                                                organizationId={
+                                                    organization.id
+                                                }
+                                                task={task}
+                                                permissions={permissions.org}
+                                            />
+                                            {canOrg(
+                                                permissions.org,
+                                                'org.focus.store',
+                                            ) &&
+                                                !task.is_done && (
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="size-7 shrink-0"
+                                                        onClick={() => {
+                                                            router.post(
+                                                                MemberDailyFocusController.store.url(
+                                                                    organization.id,
+                                                                ),
+                                                                {
+                                                                    task_id:
+                                                                        task.id,
+                                                                    focus_date:
+                                                                        filters.focus_date,
+                                                                },
+                                                            );
+                                                        }}
+                                                    >
+                                                        <Pin className="size-4" />
+                                                    </Button>
+                                                )}
+                                        </li>
                                     ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </ul>
+                            )}
+                        </CommandCard>
+
+                        <CommandCard
+                            title="Strategic projects"
+                            dot="gold"
+                        >
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {projects.map((project) => (
+                                    <Link
+                                        key={project.id}
+                                        href={`/organizations/${organization.id}/projects/${project.id}`}
+                                        className="rounded-lg border border-border/70 p-3 transition-colors hover:border-border hover:bg-muted/30"
+                                    >
+                                        <p className="font-medium">
+                                            {project.name}
+                                        </p>
+                                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                            {project.objective}
+                                        </p>
+                                        <div className="mt-2 flex gap-2">
+                                            <Badge variant="outline">
+                                                {project.health}
+                                            </Badge>
+                                            <Badge variant="secondary">
+                                                {project.progress_percent}%
+                                            </Badge>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </CommandCard>
                     </div>
                 </div>
+            </PageShell>
 
-                <footer className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-4 py-2 backdrop-blur sm:px-6">
-                    <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <span>{stats.open_tasks} open tasks</span>
-                        <span>{stats.done_today} done today</span>
-                        <span>{stats.projects} active projects</span>
-                        <span>Saved</span>
-                    </div>
-                </footer>
-            </div>
+            <footer className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-4 py-2 backdrop-blur sm:px-6">
+                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{stats.open_tasks} open tasks</span>
+                    <span>{stats.done_today} done today</span>
+                    <span>{stats.projects} active projects</span>
+                    <span>Saved</span>
+                </div>
+            </footer>
         </>
-    );
-}
-
-function Stat({
-    label,
-    value,
-    accent = false,
-}: {
-    label: string;
-    value: number;
-    accent?: boolean;
-}) {
-    return (
-        <div className="text-right">
-            <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {label}
-            </dt>
-            <dd
-                className={`text-xl font-semibold ${accent ? 'text-green-600 dark:text-green-400' : ''}`}
-            >
-                {value}
-            </dd>
-        </div>
-    );
-}
-
-function FilterButton({
-    label,
-    active,
-    onClick,
-}: {
-    label: string;
-    active: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
-                active
-                    ? 'border-primary/30 bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted'
-            }`}
-        >
-            {label}
-        </button>
     );
 }
 
@@ -456,11 +387,11 @@ function TaskRow({
     permissions: string[];
 }) {
     return (
-        <div className="flex items-center justify-between gap-2 text-sm">
-            <div className="min-w-0">
+        <>
+            <div className="min-w-0 flex-1">
                 <Link
                     href={TaskController.show.url([organizationId, task.id])}
-                    className={`font-medium hover:underline ${task.is_done ? 'text-muted-foreground line-through' : ''}`}
+                    className={`block truncate text-sm font-medium hover:text-primary hover:underline ${task.is_done ? 'text-muted-foreground line-through' : ''}`}
                 >
                     {task.title}
                 </Link>
@@ -468,11 +399,12 @@ function TaskRow({
                     {task.project_name}
                 </p>
             </div>
-            <Badge variant="outline">{task.status}</Badge>
+            <StatusPill status={task.status} />
             {canOrg(permissions, 'org.tasks.toggle-done') && !task.is_done && (
                 <Button
                     size="sm"
                     variant="ghost"
+                    className="shrink-0"
                     onClick={() => {
                         router.patch(
                             TaskController.toggleDone.url([
@@ -485,7 +417,7 @@ function TaskRow({
                     Done
                 </Button>
             )}
-        </div>
+        </>
     );
 }
 

@@ -1,17 +1,12 @@
 import OrganizationController from '@/actions/App/Http/Controllers/OrganizationController';
 import OrganizationRoleController from '@/actions/App/Http/Controllers/OrganizationRoleController';
 import { Head, Link } from '@inertiajs/react';
-import Heading from '@/components/heading';
+import { CommandCard } from '@/components/command-centre/command-card';
+import { SettingsShell } from '@/components/command-centre/settings-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import { canOrg } from '@/hooks/use-org-permissions';
+import { buildOrganizationSettingsNav } from '@/lib/organization-settings-nav';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
@@ -39,44 +34,36 @@ export default function OrganizationRolesIndex({
     permissions,
 }: OrganizationRolesIndexProps) {
     const canShow = canOrg(permissions.org, 'org.roles.show');
+    const activeHref = OrganizationRoleController.index.url(organization.id);
 
     return (
         <>
             <Head title={`Roles · ${organization.name}`} />
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-                <div className="flex items-start justify-between gap-4">
-                    <Heading
-                        title="Organization roles"
-                        description="Default roles created at organization bootstrap. Edit permission matrices per role."
-                    />
-                    <Link
-                        href={OrganizationController.show.url(organization.id)}
-                        className="text-sm underline underline-offset-4"
-                    >
-                        Settings
-                    </Link>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
+            <SettingsShell
+                title="Organization roles"
+                description="Default roles created at organization bootstrap."
+                backHref={OrganizationController.show.url(organization.id)}
+                nav={buildOrganizationSettingsNav(
+                    organization.id,
+                    permissions,
+                    activeHref,
+                )}
+            >
+                <div className="grid gap-4 md:grid-cols-2">
                     {roles.map((role) => (
-                        <Card key={role.id}>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    {role.name}
-                                    {role.is_system && (
-                                        <Badge variant="secondary">
-                                            System
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                                <CardDescription>
-                                    {role.permissions_count} permissions ·{' '}
-                                    {role.members_count} members
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {canShow ? (
-                                    <Button asChild variant="outline">
+                        <CommandCard
+                            key={role.id}
+                            title={role.name}
+                            description={`${role.permissions_count} permissions · ${role.members_count} members`}
+                            dot={role.is_system ? 'gold' : 'blue'}
+                            badge={
+                                role.is_system ? (
+                                    <Badge variant="secondary">System</Badge>
+                                ) : undefined
+                            }
+                            action={
+                                canShow ? (
+                                    <Button asChild variant="outline" size="sm">
                                         <Link
                                             href={OrganizationRoleController.show.url(
                                                 [
@@ -85,19 +72,22 @@ export default function OrganizationRolesIndex({
                                                 ],
                                             )}
                                         >
-                                            Edit permissions
+                                            Edit
                                         </Link>
                                     </Button>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">
-                                        Slug: {role.slug}
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
+                                ) : undefined
+                            }
+                        >
+                            <p className="text-sm text-muted-foreground">
+                                Slug:{' '}
+                                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                                    {role.slug}
+                                </code>
+                            </p>
+                        </CommandCard>
                     ))}
                 </div>
-            </div>
+            </SettingsShell>
         </>
     );
 }

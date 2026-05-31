@@ -1,5 +1,14 @@
 import { Link } from '@inertiajs/react';
-import { Building2, CheckSquare, FolderKanban, LayoutGrid, Settings, ShieldCheck } from 'lucide-react';
+import {
+    Building2,
+    CheckSquare,
+    FolderKanban,
+    LayoutGrid,
+    Settings,
+    ShieldCheck,
+    Sparkles,
+} from 'lucide-react';
+import ProjectOnboardingController from '@/actions/App/Http/Controllers/CommandCentre/ProjectOnboardingController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import type { NavMainSection } from '@/components/nav-main';
@@ -21,6 +30,7 @@ import type { NavItem } from '@/types';
 type SidebarNavItem = NavItem & {
     permission?: string | string[];
     orgPermission?: string | string[];
+    requiresAi?: boolean;
 };
 
 function isNavItemVisible(
@@ -55,8 +65,11 @@ function isNavItemVisible(
 
 export function AppSidebar() {
     const { can, canAny } = usePermissions();
-    const { selectedOrganization, permissions: orgPermissions } =
-        useOrganizationContext();
+    const {
+        selectedOrganization,
+        permissions: orgPermissions,
+        aiEnabled,
+    } = useOrganizationContext();
 
     const canOrgNav = (permission: string): boolean =>
         orgPermissions ? canOrg(orgPermissions.org, permission) : false;
@@ -77,6 +90,13 @@ export function AppSidebar() {
     const tasksHref =
         selectedOrganization !== null
             ? `/organizations/${selectedOrganization.id}/tasks`
+            : organizationsIndex.url();
+
+    const onboardingHref =
+        selectedOrganization !== null
+            ? ProjectOnboardingController.create.url(
+                  selectedOrganization.id,
+              )
             : organizationsIndex.url();
 
     const settingsHref =
@@ -104,6 +124,13 @@ export function AppSidebar() {
                     href: projectsHref,
                     icon: FolderKanban,
                     orgPermission: 'org.projects.index',
+                },
+                {
+                    title: 'AI onboarding',
+                    href: onboardingHref,
+                    icon: Sparkles,
+                    orgPermission: 'org.ai-onboarding.start',
+                    requiresAi: true,
                 },
                 {
                     title: 'Tasks',
@@ -135,15 +162,19 @@ export function AppSidebar() {
     const sections: NavMainSection[] = mainNavSections
         .map((section) => ({
             label: section.label,
-            items: section.items.filter((item) =>
-                isNavItemVisible(
+            items: section.items.filter((item) => {
+                if (item.requiresAi && !aiEnabled) {
+                    return false;
+                }
+
+                return isNavItemVisible(
                     item,
                     can,
                     canAny,
                     canOrgNav,
                     canOrgNavAny,
-                ),
-            ),
+                );
+            }),
         }))
         .filter((section) => section.items.length > 0);
 

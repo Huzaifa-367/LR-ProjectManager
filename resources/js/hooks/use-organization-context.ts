@@ -13,6 +13,7 @@ export function useOrganizationContext(): OrganizationContext {
             pendingInvitations: [],
             permissions: null,
             notifications: null,
+            aiEnabled: true,
         }
     );
 }
