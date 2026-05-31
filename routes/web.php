@@ -8,6 +8,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('user-roles', [UserRoleController::class, 'index'])
         ->name('user-roles.index');
 
+    Route::post('user-roles', [UserRoleController::class, 'store'])
+        ->name('user-roles.store');
+
     Route::put('user-roles/{user}', [UserRoleController::class, 'update'])
         ->name('user-roles.update');
 

@@ -2,7 +2,9 @@ import OrganizationInvitationController from '@/actions/App/Http/Controllers/Org
 import { Form } from '@inertiajs/react';
 import { MailPlus } from 'lucide-react';
 import { useState } from 'react';
+import { FormBusyOverlay } from '@/components/command-centre/form-busy-overlay';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -41,7 +43,8 @@ export function InviteMemberDialog({
                 <DialogHeader>
                     <DialogTitle>Invite by email</DialogTitle>
                     <DialogDescription>
-                        Sends an invitation the member can accept from their inbox.
+                        Sends an invitation the member can accept from their
+                        inbox.
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -54,6 +57,12 @@ export function InviteMemberDialog({
                 >
                     {({ processing, errors }) => (
                         <>
+                            <FormBusyOverlay
+                                visible={processing}
+                                title="Sending invitation"
+                                description="Delivering the invite email. This may take a moment."
+                            />
+
                             <div className="grid gap-2">
                                 <Label htmlFor="invite-email">Email</Label>
                                 <Input
@@ -62,6 +71,7 @@ export function InviteMemberDialog({
                                     type="email"
                                     required
                                     autoFocus
+                                    disabled={processing}
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -71,7 +81,8 @@ export function InviteMemberDialog({
                                     id="invite-role"
                                     name="organization_role_id"
                                     defaultValue={defaultRoleId}
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                                    disabled={processing}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {roles.map((role) => (
                                         <option key={role.id} value={role.id}>
@@ -83,17 +94,20 @@ export function InviteMemberDialog({
                                     message={errors.organization_role_id}
                                 />
                             </div>
+                            <InputError message={errors.mail_linkage} />
+
                             <DialogFooter>
                                 <Button
                                     type="button"
                                     variant="outline"
+                                    disabled={processing}
                                     onClick={() => setOpen(false)}
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <SubmitButton processing={processing}>
                                     Send invitation
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}

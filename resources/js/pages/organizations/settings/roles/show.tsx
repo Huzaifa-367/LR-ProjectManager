@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { SettingsShell } from '@/components/command-centre/settings-shell';
 import PermissionMatrix from '@/components/permission-matrix';
+import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
@@ -85,9 +86,9 @@ export default function OrganizationRoleShow({
                                         onChange={setSelectedPermissions}
                                         disabled={!canSync}
                                     />
-                                    <Button type="submit" disabled={processing}>
+                                    <SubmitButton processing={processing}>
                                         Save permissions
-                                    </Button>
+                                    </SubmitButton>
                                 </>
                             )}
                         </Form>

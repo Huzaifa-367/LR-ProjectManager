@@ -7,6 +7,7 @@ import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
@@ -137,12 +138,12 @@ export default function Security({
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <Button
-                                    disabled={processing}
+                                <SubmitButton
+                                    processing={processing}
                                     data-test="update-password-button"
                                 >
                                     Save password
-                                </Button>
+                                </SubmitButton>
                             </div>
                         </>
                     )}
@@ -167,13 +168,12 @@ export default function Security({
                             <div className="relative inline">
                                 <Form {...disable.form()}>
                                     {({ processing }) => (
-                                        <Button
+                                        <SubmitButton
+                                            processing={processing}
                                             variant="destructive"
-                                            type="submit"
-                                            disabled={processing}
                                         >
                                             Disable 2FA
-                                        </Button>
+                                        </SubmitButton>
                                     )}
                                 </Form>
                             </div>
@@ -209,12 +209,9 @@ export default function Security({
                                         }
                                     >
                                         {({ processing }) => (
-                                            <Button
-                                                type="submit"
-                                                disabled={processing}
-                                            >
+                                            <SubmitButton processing={processing}>
                                                 Enable 2FA
-                                            </Button>
+                                            </SubmitButton>
                                         )}
                                     </Form>
                                 )}

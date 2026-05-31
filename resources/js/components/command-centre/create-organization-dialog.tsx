@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -100,9 +101,9 @@ export function CreateOrganizationDialog({
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <SubmitButton processing={processing}>
                                     Create organization
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}

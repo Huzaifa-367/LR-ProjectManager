@@ -5,6 +5,7 @@ import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { SelectField } from '@/components/command-centre/select-field';
 import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -17,7 +18,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/task-options';
 
@@ -138,10 +138,9 @@ export function EditTaskDialog({
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
-                                    {processing && <Spinner />}
+                                <SubmitButton processing={processing}>
                                     Save changes
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}

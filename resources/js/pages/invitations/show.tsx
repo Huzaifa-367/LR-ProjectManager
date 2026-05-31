@@ -1,6 +1,7 @@
 import InvitationAcceptController from '@/actions/App/Http/Controllers/InvitationAcceptController';
 import { Form, Head, Link } from '@inertiajs/react';
 import Heading from '@/components/heading';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -52,7 +53,11 @@ export default function InvitationShow({
                                     token,
                                 })}
                             >
-                                <Button type="submit">Accept invitation</Button>
+                                {({ processing }) => (
+                                    <SubmitButton processing={processing}>
+                                        Accept invitation
+                                    </SubmitButton>
+                                )}
                             </Form>
                         ) : (
                             <>

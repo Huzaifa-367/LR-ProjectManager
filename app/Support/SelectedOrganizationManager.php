@@ -148,6 +148,10 @@ final class SelectedOrganizationManager
             ];
         }
 
+        app(OrganizationMemberLinker::class)->linkPendingMembershipsForUser($user);
+
+        $selectedOrganization = $this->resolveSelectedOrganization($request);
+
         $memberships = OrganizationMember::query()
             ->where('user_id', $user->id)
             ->whereIn('status', [
@@ -157,7 +161,6 @@ final class SelectedOrganizationManager
             ->with(['organization', 'role'])
             ->get();
 
-        $selectedOrganization = $this->resolveSelectedOrganization($request);
         $permissions = null;
         $notifications = null;
         $projects = [];

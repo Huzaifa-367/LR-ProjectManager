@@ -14,6 +14,7 @@ use App\Support\ActivityLogger;
 use App\Support\CommandCentreResourcePresenter;
 use App\Support\EffectivePermissionService;
 use App\Support\MemberNotificationPreferenceSeeder;
+use App\Support\OrganizationMemberLinker;
 use App\Support\OrganizationMemberResolver;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -87,12 +88,14 @@ class OrganizationMemberController extends Controller
         abort_unless($permissions->memberCan($actor, 'org.members.store'), 403);
 
         $validated = $request->validated();
-        $userId = $validated['user_id'] ?? null;
+        $linker = app(OrganizationMemberLinker::class);
+        $email = $linker->normalizeEmail($validated['email'] ?? null);
+        $userId = $linker->resolveUserId($validated['user_id'] ?? null, $email);
 
         if ($userId !== null) {
             $linkedUser = User::query()->findOrFail($userId);
             $validated['display_name'] = $validated['display_name'] ?: $linkedUser->name;
-            $validated['email'] = $validated['email'] ?? $linkedUser->email;
+            $email = $email ?? $linker->normalizeEmail($linkedUser->email);
         }
 
         $createdMember = OrganizationMember::query()->create([
@@ -100,7 +103,7 @@ class OrganizationMemberController extends Controller
             'user_id' => $userId,
             'organization_role_id' => $validated['organization_role_id'],
             'display_name' => $validated['display_name'],
-            'email' => $validated['email'] ?? null,
+            'email' => $email,
             'title' => $validated['title'] ?? null,
             'status' => OrganizationMemberStatus::Active,
             'joined_at' => now(),

@@ -30,8 +30,6 @@ final class OrganizationInvitationService
     ): array {
         $normalizedEmail = strtolower(trim($email));
 
-        $this->mailLinkageService->requireVerifiedLinkage($invitedBy);
-
         $existingPending = OrganizationInvitation::query()
             ->where('organization_id', $organization->id)
             ->where('email', $normalizedEmail)

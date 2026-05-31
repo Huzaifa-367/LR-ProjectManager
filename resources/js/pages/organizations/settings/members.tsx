@@ -2,6 +2,7 @@ import OrganizationController from '@/actions/App/Http/Controllers/OrganizationC
 import OrganizationInvitationController from '@/actions/App/Http/Controllers/OrganizationInvitationController';
 import OrganizationMemberController from '@/actions/App/Http/Controllers/OrganizationMemberController';
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { AddMemberDialog } from '@/components/command-centre/add-member-dialog';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { EmptyState } from '@/components/command-centre/empty-state';
@@ -9,6 +10,7 @@ import { InviteMemberDialog } from '@/components/command-centre/invite-member-di
 import { SettingsShell } from '@/components/command-centre/settings-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { canOrg } from '@/hooks/use-org-permissions';
 import { buildOrganizationSettingsNav } from '@/lib/organization-settings-nav';
 import type {
@@ -62,6 +64,11 @@ export default function OrganizationMembersSettings({
     const activeHref = OrganizationMemberController.index.url(
         organization.id,
     );
+    const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+    const finishAction = (): void => setPendingAction(null);
+
+    const isPending = (key: string): boolean => pendingAction === key;
 
     return (
         <>
@@ -114,7 +121,13 @@ export default function OrganizationMembersSettings({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
+                                                disabled={isPending(
+                                                    `resend-${invitation.id}`,
+                                                )}
                                                 onClick={() => {
+                                                    setPendingAction(
+                                                        `resend-${invitation.id}`,
+                                                    );
                                                     router.post(
                                                         OrganizationInvitationController.resend.url(
                                                             [
@@ -122,9 +135,17 @@ export default function OrganizationMembersSettings({
                                                                 invitation.id,
                                                             ],
                                                         ),
+                                                        {},
+                                                        {
+                                                            onFinish:
+                                                                finishAction,
+                                                        },
                                                     );
                                                 }}
                                             >
+                                                {isPending(
+                                                    `resend-${invitation.id}`,
+                                                ) && <Spinner />}
                                                 Resend
                                             </Button>
                                         )}
@@ -132,7 +153,13 @@ export default function OrganizationMembersSettings({
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
+                                                disabled={isPending(
+                                                    `revoke-${invitation.id}`,
+                                                )}
                                                 onClick={() => {
+                                                    setPendingAction(
+                                                        `revoke-${invitation.id}`,
+                                                    );
                                                     router.delete(
                                                         OrganizationInvitationController.destroy.url(
                                                             [
@@ -140,9 +167,16 @@ export default function OrganizationMembersSettings({
                                                                 invitation.id,
                                                             ],
                                                         ),
+                                                        {
+                                                            onFinish:
+                                                                finishAction,
+                                                        },
                                                     );
                                                 }}
                                             >
+                                                {isPending(
+                                                    `revoke-${invitation.id}`,
+                                                ) && <Spinner />}
                                                 Revoke
                                             </Button>
                                         )}
@@ -201,7 +235,13 @@ export default function OrganizationMembersSettings({
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
+                                                    disabled={isPending(
+                                                        `disable-${member.id}`,
+                                                    )}
                                                     onClick={() => {
+                                                        setPendingAction(
+                                                            `disable-${member.id}`,
+                                                        );
                                                         router.patch(
                                                             OrganizationMemberController.disable.url(
                                                                 [
@@ -209,9 +249,17 @@ export default function OrganizationMembersSettings({
                                                                     member.id,
                                                                 ],
                                                             ),
+                                                            {},
+                                                            {
+                                                                onFinish:
+                                                                    finishAction,
+                                                            },
                                                         );
                                                     }}
                                                 >
+                                                    {isPending(
+                                                        `disable-${member.id}`,
+                                                    ) && <Spinner />}
                                                     Disable
                                                 </Button>
                                             )}

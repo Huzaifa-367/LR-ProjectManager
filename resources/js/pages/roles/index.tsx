@@ -1,7 +1,8 @@
 import { Head } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { Plus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import AllAccountsTable from '@/components/all-accounts-table';
+import CreateUserDialog from '@/components/create-user-dialog';
 import Heading from '@/components/heading';
 import RoleCard from '@/components/role-card';
 import RoleFormDialog from '@/components/role-form-dialog';
@@ -118,10 +119,24 @@ export default function RolesIndex({
 
                 {permissionsFlags.canViewUsers && users && (
                     <section className="space-y-4">
-                        <Heading
-                            title="All accounts"
-                            description="Assign a role to every person who collaborates in this workspace."
-                        />
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                            <Heading
+                                title="All accounts"
+                                description="Create logins for platform users and assign their roles."
+                            />
+
+                            {permissionsFlags.canAssignRoles && (
+                                <CreateUserDialog
+                                    roles={assignableRoles}
+                                    trigger={
+                                        <Button data-test="create-user-button">
+                                            <UserPlus className="size-4" />
+                                            Add user
+                                        </Button>
+                                    }
+                                />
+                            )}
+                        </div>
 
                         <AllAccountsTable
                             users={users}

@@ -20,6 +20,10 @@ use Throwable;
 
 final class PersonalMailLinkageService
 {
+    public function __construct(
+        private readonly OrganizationMailerResolver $mailerResolver,
+    ) {}
+
     public function requireVerifiedLinkage(OrganizationMember $member): MemberMailLinkage
     {
         $linkage = MemberMailLinkage::query()
@@ -41,7 +45,6 @@ final class PersonalMailLinkageService
         OrganizationInvitation $invitation,
         string $acceptUrl,
     ): NotificationDelivery {
-        $linkage = $this->requireVerifiedLinkage($inviter);
         $invitation->loadMissing(['role', 'organization']);
 
         $mailable = new MemberInvitedMail(
@@ -51,16 +54,30 @@ final class PersonalMailLinkageService
             acceptUrl: $acceptUrl,
         );
 
-        return $this->send(
+        $linkage = MemberMailLinkage::query()
+            ->where('organization_member_id', $inviter->id)
+            ->first();
+
+        if ($linkage !== null && $linkage->is_verified) {
+            return $this->send(
+                organization: $organization,
+                sender: $inviter,
+                linkage: $linkage,
+                recipientEmail: $invitation->email,
+                eventType: NotificationEventType::MemberInvited,
+                subject: $mailable->envelope()->subject,
+                mailable: $mailable,
+                subjectModel: $invitation,
+                notificationClass: MemberInvitedMail::class,
+            );
+        }
+
+        return $this->sendViaOrganizationOrPlatform(
             organization: $organization,
             sender: $inviter,
-            linkage: $linkage,
             recipientEmail: $invitation->email,
-            eventType: NotificationEventType::MemberInvited,
-            subject: $mailable->envelope()->subject,
             mailable: $mailable,
             subjectModel: $invitation,
-            notificationClass: MemberInvitedMail::class,
         );
     }
 
@@ -150,6 +167,64 @@ final class PersonalMailLinkageService
             Mail::mailer($mailerName)
                 ->to($recipientEmail)
                 ->send($mailable);
+
+            $delivery->update([
+                'status' => DeliveryStatus::Sent,
+                'sent_at' => now(),
+            ]);
+        } catch (Throwable $exception) {
+            $delivery->update([
+                'status' => DeliveryStatus::Failed,
+                'error_message' => $exception->getMessage(),
+                'failed_at' => now(),
+            ]);
+
+            throw $exception;
+        }
+
+        return $delivery;
+    }
+
+    private function sendViaOrganizationOrPlatform(
+        Organization $organization,
+        OrganizationMember $sender,
+        string $recipientEmail,
+        Mailable $mailable,
+        object $subjectModel,
+    ): NotificationDelivery {
+        $profile = $this->mailerResolver->defaultForOrganization($organization);
+        $deliveryMethod = $profile !== null ? 'organization_mail_profile' : 'platform_default';
+
+        $delivery = NotificationDelivery::query()->create([
+            'organization_id' => $organization->id,
+            'organization_mail_profile_id' => $profile?->id,
+            'organization_member_id' => $sender->id,
+            'recipient_user_id' => null,
+            'recipient_email' => $recipientEmail,
+            'channel' => NotificationChannel::Mail,
+            'notification_class' => $mailable::class,
+            'event_type' => NotificationEventType::MemberInvited->value,
+            'subject' => $mailable->envelope()->subject,
+            'payload' => [
+                'delivery_method' => $deliveryMethod,
+            ],
+            'subject_type' => $subjectModel->getMorphClass(),
+            'subject_id' => $subjectModel->getKey(),
+            'status' => DeliveryStatus::Queued,
+            'attempts' => 1,
+            'queued_at' => now(),
+        ]);
+
+        try {
+            if ($profile !== null) {
+                $mailerName = $this->mailerResolver->registerMailer($profile);
+
+                Mail::mailer($mailerName)
+                    ->to($recipientEmail)
+                    ->send($mailable);
+            } else {
+                Mail::to($recipientEmail)->send($mailable);
+            }
 
             $delivery->update([
                 'status' => DeliveryStatus::Sent,

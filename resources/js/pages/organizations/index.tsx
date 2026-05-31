@@ -1,11 +1,13 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Building2 } from 'lucide-react';
+import { useState } from 'react';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { CreateOrganizationDialog } from '@/components/command-centre/create-organization-dialog';
 import { EmptyState } from '@/components/command-centre/empty-state';
 import { PageShell } from '@/components/command-centre/page-shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { index, select } from '@/routes/organizations';
 import type { OrganizationListItem } from '@/types/organization';
 
@@ -36,6 +38,10 @@ export default function OrganizationsIndex({
     pendingInvitations,
 }: OrganizationsIndexProps) {
     const hasOrganizations = organizations.length > 0;
+    const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+    const finishAction = (): void => setPendingAction(null);
+    const isPending = (key: string): boolean => pendingAction === key;
 
     return (
         <>
@@ -94,13 +100,26 @@ export default function OrganizationsIndex({
                                     {organization.member_status === 'active' ? (
                                         <Button
                                             size="sm"
+                                            disabled={isPending(
+                                                `open-${organization.id}`,
+                                            )}
                                             onClick={() => {
-                                                router.post(select.url(), {
-                                                    organization_id:
-                                                        organization.id,
-                                                });
+                                                setPendingAction(
+                                                    `open-${organization.id}`,
+                                                );
+                                                router.post(
+                                                    select.url(),
+                                                    {
+                                                        organization_id:
+                                                            organization.id,
+                                                    },
+                                                    { onFinish: finishAction },
+                                                );
                                             }}
                                         >
+                                            {isPending(
+                                                `open-${organization.id}`,
+                                            ) && <Spinner />}
                                             Open
                                         </Button>
                                     ) : (
@@ -136,10 +155,23 @@ export default function OrganizationsIndex({
                                     </div>
                                     <Button
                                         size="sm"
+                                        disabled={isPending(
+                                            `accept-${invitation.id}`,
+                                        )}
                                         onClick={() => {
-                                            router.post(invitation.accept_url);
+                                            setPendingAction(
+                                                `accept-${invitation.id}`,
+                                            );
+                                            router.post(
+                                                invitation.accept_url,
+                                                {},
+                                                { onFinish: finishAction },
+                                            );
                                         }}
                                     >
+                                        {isPending(
+                                            `accept-${invitation.id}`,
+                                        ) && <Spinner />}
                                         Accept
                                     </Button>
                                 </li>

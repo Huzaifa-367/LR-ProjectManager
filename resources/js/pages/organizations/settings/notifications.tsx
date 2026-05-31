@@ -4,6 +4,7 @@ import OrganizationMailProfileController from '@/actions/App/Http/Controllers/Or
 import { Form, Head, Link } from '@inertiajs/react';
 import { CommandCard } from '@/components/command-centre/command-card';
 import { SettingsShell } from '@/components/command-centre/settings-shell';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
 import { buildOrganizationSettingsNav } from '@/lib/organization-settings-nav';
@@ -180,9 +181,9 @@ export default function OrganizationNotificationPreferences({
                                             </tbody>
                                         </table>
                                     </div>
-                                    <Button type="submit" disabled={processing}>
+                                    <SubmitButton processing={processing}>
                                         Save preferences
-                                    </Button>
+                                    </SubmitButton>
                                 </>
                             )}
                         </Form>

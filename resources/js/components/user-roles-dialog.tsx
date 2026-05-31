@@ -2,6 +2,7 @@ import { Form } from '@inertiajs/react';
 import { useState } from 'react';
 import UserRoleController from '@/actions/App/Http/Controllers/Settings/UserRoleController';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -109,13 +110,13 @@ export default function UserRolesDialog({
                                 >
                                     Cancel
                                 </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={processing || !hasSelection}
+                                <SubmitButton
+                                    processing={processing}
+                                    disabled={!hasSelection}
                                     data-test={`save-user-role-${user.id}`}
                                 >
                                     Save changes
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}

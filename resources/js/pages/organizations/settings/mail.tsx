@@ -7,6 +7,7 @@ import { CommandCard } from '@/components/command-centre/command-card';
 import { EmptyState } from '@/components/command-centre/empty-state';
 import { SettingsShell } from '@/components/command-centre/settings-shell';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -213,12 +214,9 @@ export default function OrganizationMailSettings({
                                                 Set as default profile
                                             </label>
                                             <div className="sm:col-span-2">
-                                                <Button
-                                                    type="submit"
-                                                    disabled={processing}
-                                                >
+                                                <SubmitButton processing={processing}>
                                                     Save profile
-                                                </Button>
+                                                </SubmitButton>
                                             </div>
                                         </>
                                     )}
@@ -423,13 +421,10 @@ export default function OrganizationMailSettings({
                                             />
                                         </div>
                                         <div className="flex flex-wrap gap-2 sm:col-span-2">
-                                            <Button
-                                                type="submit"
-                                                disabled={processing}
-                                            >
+                                            <SubmitButton processing={processing}>
                                                 <Mail className="size-4" />
                                                 Save Gmail linkage
-                                            </Button>
+                                            </SubmitButton>
                                             {canTestPersonal &&
                                                 mailLinkage.gmail_address && (
                                                     <Button

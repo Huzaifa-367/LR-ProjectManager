@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/react';
 import { MessageSquarePlus } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -77,9 +78,9 @@ export function AddCommentDialog({
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <SubmitButton processing={processing}>
                                     Post comment
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}

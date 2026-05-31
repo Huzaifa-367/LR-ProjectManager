@@ -3,6 +3,7 @@ import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileCo
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -105,12 +106,12 @@ export default function Profile({
                                 )}
 
                             <div className="flex items-center gap-4">
-                                <Button
-                                    disabled={processing}
+                                <SubmitButton
+                                    processing={processing}
                                     data-test="update-profile-button"
                                 >
                                     Save
-                                </Button>
+                                </SubmitButton>
                             </div>
                         </>
                     )}

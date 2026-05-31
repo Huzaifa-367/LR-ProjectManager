@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/react';
 import { Paperclip } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -82,9 +83,9 @@ export function UploadAttachmentDialog({
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <SubmitButton processing={processing}>
                                     Upload
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import RoleController from '@/actions/App/Http/Controllers/Settings/RoleController';
 import InputError from '@/components/input-error';
 import PermissionMatrix from '@/components/permission-matrix';
+import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -160,9 +161,8 @@ function RoleFormDialogBody({
                                     Cancel
                                 </Button>
                             </DialogClose>
-                            <Button
-                                type="submit"
-                                disabled={processing}
+                            <SubmitButton
+                                processing={processing}
                                 data-test={
                                     isEditing
                                         ? 'update-role-button'
@@ -170,7 +170,7 @@ function RoleFormDialogBody({
                                 }
                             >
                                 {isEditing ? 'Update' : 'Create'}
-                            </Button>
+                            </SubmitButton>
                         </div>
                     </DialogFooter>
                 </>
@@ -225,15 +225,14 @@ function DeleteRoleInlineForm({
                     >
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
+                    <SubmitButton
+                        processing={processing}
                         size="sm"
                         variant="destructive"
-                        disabled={processing}
                         data-test={`confirm-delete-role-${role.name}`}
                     >
                         Confirm delete
-                    </Button>
+                    </SubmitButton>
                 </>
             )}
         </Form>

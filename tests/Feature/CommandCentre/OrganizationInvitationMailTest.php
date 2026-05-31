@@ -5,6 +5,7 @@ namespace Tests\Feature\CommandCentre;
 use App\Enums\DeliveryStatus;
 use App\Enums\InvitationStatus;
 use App\Mail\MemberInvitedMail;
+use App\Mail\TestPersonalMailLinkageMail;
 use App\Models\MemberMailLinkage;
 use App\Models\OrganizationInvitation;
 use App\Models\User;
@@ -38,7 +39,7 @@ class OrganizationInvitationMailTest extends TestCase
             ->post(route('organizations.member-mail-linkage.test', $organization))
             ->assertRedirect();
 
-        Mail::assertSent(\App\Mail\TestPersonalMailLinkageMail::class);
+        Mail::assertSent(TestPersonalMailLinkageMail::class);
 
         $this->assertTrue(
             MemberMailLinkage::query()
@@ -85,8 +86,10 @@ class OrganizationInvitationMailTest extends TestCase
         ]);
     }
 
-    public function test_invitation_store_requires_verified_personal_gmail_linkage(): void
+    public function test_invitation_store_sends_via_platform_mail_when_no_linkage(): void
     {
+        Mail::fake();
+
         $owner = User::factory()->create();
         $organization = app(OrganizationBootstrapService::class)->create($owner, [
             'name' => 'No Linkage Org',
@@ -98,7 +101,18 @@ class OrganizationInvitationMailTest extends TestCase
                 'email' => 'newmember@example.com',
                 'organization_role_id' => $memberRole->id,
             ])
-            ->assertSessionHasErrors('mail_linkage');
+            ->assertRedirect();
+
+        Mail::assertSent(MemberInvitedMail::class, function (MemberInvitedMail $mail): bool {
+            return $mail->hasTo('newmember@example.com');
+        });
+
+        $this->assertDatabaseHas('notification_deliveries', [
+            'organization_id' => $organization->id,
+            'recipient_email' => 'newmember@example.com',
+            'event_type' => 'member_invited',
+            'status' => DeliveryStatus::Sent->value,
+        ]);
     }
 
     public function test_invitation_resend_rotates_token_and_sends_mail(): void

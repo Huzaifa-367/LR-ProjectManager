@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/react';
 import { UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { SubmitButton } from '@/components/submit-button';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -99,9 +100,9 @@ export function AddMemberDialog({
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <SubmitButton processing={processing}>
                                     Add member
-                                </Button>
+                                </SubmitButton>
                             </DialogFooter>
                         </>
                     )}
