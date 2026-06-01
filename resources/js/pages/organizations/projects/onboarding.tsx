@@ -22,6 +22,11 @@ import {
     isSuggestionSelected,
     type QuestionSuggestion,
 } from '@/lib/onboarding-answers';
+import {
+    PROJECT_ROLE_ASSIGNABLE_SLUGS,
+    formatProjectRoleSlug,
+    type ProjectRoleSlug,
+} from '@/lib/project-role-options';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
@@ -132,6 +137,9 @@ export default function ProjectOnboarding({
     const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>(() =>
         members.slice(0, 3).map((member) => member.id),
     );
+    const [memberRoleSlugs, setMemberRoleSlugs] = useState<
+        Record<number, ProjectRoleSlug>
+    >({});
     const { aiEnabled } = useOrganizationContext();
     const canPropose = canOrg(permissions.org, 'org.ai-onboarding.propose');
 
@@ -160,16 +168,46 @@ export default function ProjectOnboarding({
         [members, selectedMemberIds],
     );
 
+    const resolveMemberRoleSlug = (
+        memberId: number,
+        index: number,
+    ): ProjectRoleSlug =>
+        memberRoleSlugs[memberId] ??
+        (index === 0 ? 'project_lead' : 'contributor');
+
     const toggleMember = (memberId: number, checked: boolean): void => {
         setSelectedMemberIds((current) => {
             if (checked) {
-                return current.includes(memberId)
-                    ? current
-                    : [...current, memberId];
+                if (current.includes(memberId)) {
+                    return current;
+                }
+
+                const nextIndex = current.length;
+
+                setMemberRoleSlugs((roles) => ({
+                    ...roles,
+                    [memberId]: resolveMemberRoleSlug(memberId, nextIndex),
+                }));
+
+                return [...current, memberId];
             }
+
+            setMemberRoleSlugs((roles) => {
+                const next = { ...roles };
+                delete next[memberId];
+
+                return next;
+            });
 
             return current.filter((id) => id !== memberId);
         });
+    };
+
+    const setMemberRoleSlug = (
+        memberId: number,
+        slug: ProjectRoleSlug,
+    ): void => {
+        setMemberRoleSlugs((current) => ({ ...current, [memberId]: slug }));
     };
 
     const updateAnswer = (key: string, value: string): void => {
@@ -656,11 +694,10 @@ export default function ProjectOnboarding({
                                                     <input
                                                         type="hidden"
                                                         name={`team[${index}][project_role_slug]`}
-                                                        value={
-                                                            index === 0
-                                                                ? 'project_lead'
-                                                                : 'contributor'
-                                                        }
+                                                        value={resolveMemberRoleSlug(
+                                                            member.id,
+                                                            index,
+                                                        )}
                                                     />
                                                     <input
                                                         type="hidden"
@@ -725,12 +762,19 @@ export default function ProjectOnboarding({
                                 const isSelected = selectedMemberIds.includes(
                                     member.id,
                                 );
-                                const leadId = selectedMemberIds[0];
+                                const memberIndex =
+                                    selectedMemberIds.indexOf(member.id);
+                                const roleSlug = isSelected
+                                    ? resolveMemberRoleSlug(
+                                          member.id,
+                                          memberIndex,
+                                      )
+                                    : null;
 
                                 return (
                                     <li
                                         key={member.id}
-                                        className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                                        className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                                     >
                                         <label
                                             htmlFor={`member-${member.id}`}
@@ -750,21 +794,38 @@ export default function ProjectOnboarding({
                                                 {member.display_name}
                                             </span>
                                         </label>
-                                        <span
-                                            className={cn(
-                                                'text-[10px] font-semibold tracking-wide uppercase',
-                                                member.id === leadId &&
-                                                    isSelected
-                                                    ? 'text-primary'
-                                                    : 'text-muted-foreground',
-                                            )}
-                                        >
-                                            {member.id === leadId && isSelected
-                                                ? 'Project lead'
-                                                : isSelected
-                                                  ? 'Contributor'
-                                                  : 'Not included'}
-                                        </span>
+                                        {isSelected && roleSlug !== null ? (
+                                            <select
+                                                id={`member-role-${member.id}`}
+                                                value={roleSlug}
+                                                onChange={(event) =>
+                                                    setMemberRoleSlug(
+                                                        member.id,
+                                                        event.target
+                                                            .value as ProjectRoleSlug,
+                                                    )
+                                                }
+                                                className="h-9 min-w-[11rem] rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                                                aria-label={`Project role for ${member.display_name}`}
+                                            >
+                                                {PROJECT_ROLE_ASSIGNABLE_SLUGS.map(
+                                                    (slug) => (
+                                                        <option
+                                                            key={slug}
+                                                            value={slug}
+                                                        >
+                                                            {formatProjectRoleSlug(
+                                                                slug,
+                                                            )}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">
+                                                Not included
+                                            </span>
+                                        )}
                                     </li>
                                 );
                             })}

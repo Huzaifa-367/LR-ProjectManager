@@ -39,6 +39,11 @@ class ProjectRole extends Model
         return $this->hasMany(ProjectRolePermission::class);
     }
 
+    public function members(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class);
+    }
+
     /** @return list<string> */
     public function permissionSlugs(): array
     {

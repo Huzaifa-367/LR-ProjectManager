@@ -132,9 +132,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::get('roles', [OrganizationRoleController::class, 'index'])
                 ->middleware('org.permission:org.roles.index')
                 ->name('organizations.roles.index');
+            Route::post('roles', [OrganizationRoleController::class, 'store'])
+                ->middleware('org.permission:org.roles.store')
+                ->name('organizations.roles.store');
             Route::get('roles/{organizationRole}', [OrganizationRoleController::class, 'show'])
                 ->middleware('org.permission:org.roles.show')
                 ->name('organizations.roles.show');
+            Route::patch('roles/{organizationRole}', [OrganizationRoleController::class, 'update'])
+                ->middleware('org.permission:org.roles.update')
+                ->name('organizations.roles.update');
+            Route::delete('roles/{organizationRole}', [OrganizationRoleController::class, 'destroy'])
+                ->middleware('org.permission:org.roles.destroy')
+                ->name('organizations.roles.destroy');
             Route::put('roles/{organizationRole}/permissions', [OrganizationRoleController::class, 'syncPermissions'])
                 ->middleware('org.permission:org.roles.permissions.sync')
                 ->name('organizations.roles.permissions.sync');
@@ -281,6 +290,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                     Route::get('roles', [ProjectRoleController::class, 'index'])
                         ->middleware('project.permission:project.roles.index')
                         ->name('projects.roles.index');
+                    Route::post('roles', [ProjectRoleController::class, 'store'])
+                        ->middleware('project.permission:project.roles.store')
+                        ->name('projects.roles.store');
+                    Route::get('roles/{projectRole}', [ProjectRoleController::class, 'show'])
+                        ->middleware('project.permission:project.roles.show')
+                        ->name('projects.roles.show');
+                    Route::patch('roles/{projectRole}', [ProjectRoleController::class, 'update'])
+                        ->middleware('project.permission:project.roles.update')
+                        ->name('projects.roles.update');
+                    Route::delete('roles/{projectRole}', [ProjectRoleController::class, 'destroy'])
+                        ->middleware('project.permission:project.roles.destroy')
+                        ->name('projects.roles.destroy');
                     Route::put('roles/{projectRole}/permissions', [ProjectRoleController::class, 'syncPermissions'])
                         ->middleware('project.permission:project.roles.permissions.sync')
                         ->name('projects.roles.permissions.sync');

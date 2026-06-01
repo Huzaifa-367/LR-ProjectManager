@@ -1,5 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react';
+import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
+import type { BreadcrumbItem } from '@/types';
 
 type PageStat = {
     label: string;
@@ -11,6 +13,7 @@ type PageShellProps = PropsWithChildren<{
     title: ReactNode;
     accent?: ReactNode;
     subtitle?: string;
+    breadcrumbs?: BreadcrumbItem[];
     stats?: PageStat[];
     actions?: ReactNode;
     className?: string;
@@ -28,6 +31,7 @@ export function PageShell({
     title,
     accent,
     subtitle,
+    breadcrumbs = [],
     stats = [],
     actions,
     className,
@@ -36,8 +40,47 @@ export function PageShell({
 }: PageShellProps) {
     return (
         <div className={cn('tcm-page flex flex-col gap-6', className)}>
-            <section className="flex flex-col gap-4 border-b border-border/60 pb-6 lg:flex-row lg:items-end lg:justify-between">
-                <div className="min-w-0 space-y-1">
+            <section className="flex flex-col gap-4 border-b border-border/60 pb-5 lg:flex-row lg:items-end lg:justify-between">
+                <div className="min-w-0 space-y-2">
+                    {breadcrumbs.length > 0 && (
+                        <nav
+                            aria-label="Breadcrumb"
+                            className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+                        >
+                            {breadcrumbs.map((item, index) => {
+                                const isLast =
+                                    index === breadcrumbs.length - 1;
+
+                                return (
+                                    <span
+                                        key={`${item.href}-${index}`}
+                                        className="inline-flex items-center gap-1.5"
+                                    >
+                                        {index > 0 && (
+                                            <span
+                                                className="text-border"
+                                                aria-hidden
+                                            >
+                                                /
+                                            </span>
+                                        )}
+                                        {isLast ? (
+                                            <span className="font-medium text-foreground">
+                                                {item.title}
+                                            </span>
+                                        ) : (
+                                            <Link
+                                                href={item.href}
+                                                className="hover:text-foreground hover:underline"
+                                            >
+                                                {item.title}
+                                            </Link>
+                                        )}
+                                    </span>
+                                );
+                            })}
+                        </nav>
+                    )}
                     <h1 className="tcm-greeting">
                         {title}
                         {accent !== undefined && (
@@ -47,23 +90,18 @@ export function PageShell({
                             </>
                         )}
                     </h1>
-                    {subtitle && (
-                        <p className="text-xs italic tracking-wide text-muted-foreground">
-                            {subtitle}
-                        </p>
+                    {subtitle && breadcrumbs.length === 0 && (
+                        <p className="tcm-section-eyebrow">{subtitle}</p>
                     )}
                 </div>
-                <div className="flex flex-wrap items-end gap-4">
+                <div className="flex flex-wrap items-end gap-3">
                     {stats.length > 0 && (
-                        <dl className="flex flex-wrap gap-x-6 gap-y-3">
+                        <dl className="flex flex-wrap gap-2">
                             {stats.map((stat) => (
-                                <div key={stat.label} className="text-right">
-                                    <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
-                                        {stat.label}
-                                    </dt>
+                                <div key={stat.label} className="tcm-stat-chip">
+                                    <dt>{stat.label}</dt>
                                     <dd
                                         className={cn(
-                                            'font-semibold text-xl leading-none',
                                             statToneClass[
                                                 stat.tone ?? 'default'
                                             ],

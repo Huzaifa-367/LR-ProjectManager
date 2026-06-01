@@ -12,7 +12,7 @@ export function AppSidebarHeader({
     breadcrumbs?: BreadcrumbItemType[];
 }) {
     return (
-        <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-background/90 px-4 backdrop-blur-xl transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-5">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-4 backdrop-blur-md transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-6">
             <div className="flex min-w-0 items-center gap-2.5">
                 <SidebarTrigger className="-ml-1" />
                 <div className="hidden h-4 w-px bg-border/80 sm:block" />

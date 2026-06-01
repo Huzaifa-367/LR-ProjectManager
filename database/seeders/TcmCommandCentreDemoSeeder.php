@@ -60,15 +60,8 @@ class TcmCommandCentreDemoSeeder extends Seeder
             ->first();
 
         if ($project === null) {
-            $projectTeam = array_map(
-                fn (array $person, int $index): array => [
-                    'organization_member_id' => $teamMembers[$index + 1]->id,
-                    'project_role_slug' => $person['project_role'],
-                ],
-                self::TEAM,
-                array_keys(self::TEAM),
-            );
-
+            // Only the creator is on the project team initially so "Add to team"
+            // remains usable for assigning Huzaifa, Rafay, and the rest.
             $project = app(ProjectBootstrapService::class)->create(
                 $organization,
                 $ownerMember,
@@ -78,7 +71,6 @@ class TcmCommandCentreDemoSeeder extends Seeder
                     'progress_percent' => 35,
                     'next_action' => 'Complete milestone 7 parity',
                 ],
-                $projectTeam,
             );
         }
 

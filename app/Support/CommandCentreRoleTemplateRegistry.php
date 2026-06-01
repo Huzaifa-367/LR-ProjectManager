@@ -90,9 +90,9 @@ final class CommandCentreRoleTemplateRegistry
     {
         $prefixes = [
             'org.organizations.show',
-            'org.members.index',
-            'org.members.show',
-            'org.invitations.index',
+            'org.members.',
+            'org.invitations.',
+            'org.roles.',
             'org.command-centre.index',
             'org.projects.',
             'org.ai-',
@@ -174,7 +174,7 @@ final class CommandCentreRoleTemplateRegistry
     {
         return array_values(array_diff(
             CommandCentrePermissionRegistry::allProjectSlugs(),
-            ['project.roles.destroy', 'project.roles.permissions.sync'],
+            ['project.roles.destroy'],
         ));
     }
 

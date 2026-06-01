@@ -45,7 +45,16 @@ export default function ProjectsIndex({
             <Head title="Projects" />
             <PageShell
                 title="Projects"
-                subtitle={organization.name}
+                breadcrumbs={[
+                    {
+                        title: organization.name,
+                        href: `/organizations/${organization.id}/command-centre`,
+                    },
+                    {
+                        title: 'Projects',
+                        href: ProjectController.index.url(organization.id),
+                    },
+                ]}
                 stats={[
                     { label: 'Active', value: projects.length },
                 ]}

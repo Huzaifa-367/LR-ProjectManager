@@ -2,11 +2,11 @@ import OrganizationRoleController from '@/actions/App/Http/Controllers/Organizat
 import { Form, Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { CommandCard } from '@/components/command-centre/command-card';
+import { OrganizationRoleDetailsForm } from '@/components/command-centre/organization-role-details-form';
 import { SettingsShell } from '@/components/command-centre/settings-shell';
 import PermissionMatrix from '@/components/permission-matrix';
 import { SubmitButton } from '@/components/submit-button';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
 import { buildOrganizationSettingsNav } from '@/lib/organization-settings-nav';
 import type {
@@ -23,6 +23,7 @@ type OrganizationRoleShowProps = {
         slug: string;
         description: string | null;
         is_system: boolean;
+        members_count: number;
         permissions: string[];
     };
     permissionGroups: PermissionGroup[];
@@ -38,6 +39,8 @@ export default function OrganizationRoleShow({
     permissions,
 }: OrganizationRoleShowProps) {
     const canSync = canOrg(permissions.org, 'org.roles.permissions.sync');
+    const canUpdate = canOrg(permissions.org, 'org.roles.update');
+    const canDestroy = canOrg(permissions.org, 'org.roles.destroy');
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
         role.permissions,
     );
@@ -70,12 +73,24 @@ export default function OrganizationRoleShow({
                     {role.is_system && (
                         <Badge variant="secondary">System role</Badge>
                     )}
+                    {!role.is_system && (
+                        <Badge variant="outline">Custom role</Badge>
+                    )}
                     {lockedPermissions.map((permission) => (
                         <Badge key={permission} variant="outline">
                             Locked: {permission}
                         </Badge>
                     ))}
                 </div>
+
+                <CommandCard title="Role details" dot="gold">
+                    <OrganizationRoleDetailsForm
+                        organizationId={organization.id}
+                        role={role}
+                        canUpdate={canUpdate}
+                        canDestroy={canDestroy}
+                    />
+                </CommandCard>
 
                 <CommandCard title="Permissions" dot="crimson">
                     {canSync ? (

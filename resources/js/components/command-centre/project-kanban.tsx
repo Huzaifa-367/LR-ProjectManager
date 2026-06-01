@@ -2,8 +2,10 @@ import TaskController from '@/actions/App/Http/Controllers/CommandCentre/TaskCon
 import { Link, router } from '@inertiajs/react';
 import { GripVertical } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { AssigneeAvatars } from '@/components/command-centre/assignee-avatars';
 import { EmptyState } from '@/components/command-centre/empty-state';
-import { StatusPill } from '@/components/command-centre/status-pill';
+import { PriorityIndicator } from '@/components/command-centre/priority-indicator';
+import { TaskKey } from '@/components/command-centre/task-key';
 import {
     TaskKindBadge,
     taskKindCardClass,
@@ -51,13 +53,6 @@ const STATUS_OPTIONS = KANBAN_COLUMNS.map((column) => ({
     value: column.status,
     label: column.label,
 }));
-
-const dotClass: Record<KanbanColumn['dot'], string> = {
-    crimson: 'bg-primary shadow-[0_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)]',
-    gold: 'bg-amber-500 shadow-[0_0_8px_rgba(212,168,67,0.35)]',
-    blue: 'bg-blue-500 shadow-[0_0_8px_rgba(91,156,246,0.35)]',
-    green: 'bg-emerald-500 shadow-[0_0_8px_rgba(46,204,113,0.35)]',
-};
 
 type ProjectKanbanProps = {
     organizationId: number;
@@ -202,22 +197,9 @@ export function ProjectKanban({
                     }}
                     onDrop={(event) => handleColumnDrop(event, column.status)}
                 >
-                    <header className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
-                        <div className="flex items-center gap-2">
-                            <span
-                                className={cn(
-                                    'size-1.5 shrink-0 rounded-full',
-                                    dotClass[column.dot],
-                                )}
-                                aria-hidden
-                            />
-                            <h3 className="text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">
-                                {column.label}
-                            </h3>
-                        </div>
-                        <span className="text-xs font-semibold text-muted-foreground">
-                            {columnTasks.length}
-                        </span>
+                    <header className="tcm-kanban-column-header">
+                        <h3 className="tcm-kanban-column-title">{column.label}</h3>
+                        <span className="tcm-kanban-count">{columnTasks.length}</span>
                     </header>
                     <ul className="flex flex-1 flex-col gap-2 p-2">
                         {columnTasks.length === 0 ? (
@@ -234,30 +216,25 @@ export function ProjectKanban({
                                         }
                                         onDragEnd={handleDragEnd}
                                         className={cn(
-                                            'tcm-kanban-card',
+                                            'tcm-kanban-card group/card relative',
                                             taskKindCardClass(task.kind),
                                             canDrag && 'tcm-kanban-card--draggable',
                                             draggingTaskId === task.id &&
                                                 'tcm-kanban-card--dragging',
                                         )}
                                     >
-                                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                                            <TaskKindBadge kind={task.kind} />
-                                            {task.priority && (
-                                                <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-                                                    {task.priority}
-                                                </span>
-                                            )}
-                                        </div>
                                         {canDrag && (
-                                            <div
-                                                className="mb-2 flex items-center gap-1 text-[10px] text-muted-foreground"
+                                            <GripVertical
+                                                className="absolute top-2.5 right-2 size-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover/card:opacity-100"
                                                 aria-hidden
-                                            >
-                                                <GripVertical className="size-3.5 shrink-0 opacity-60" />
-                                                <span>Drag to move</span>
-                                            </div>
+                                            />
                                         )}
+                                        <div className="mb-2 flex flex-wrap items-center gap-1.5 pr-4">
+                                            <TaskKindBadge kind={task.kind} />
+                                            <PriorityIndicator
+                                                priority={task.priority}
+                                            />
+                                        </div>
                                         <Link
                                             href={TaskController.show.url([
                                                 organizationId,
@@ -270,27 +247,19 @@ export function ProjectKanban({
                                                 }
                                             }}
                                             className={cn(
-                                                'mb-2 block text-sm font-medium leading-snug hover:text-primary hover:underline',
+                                                'mb-3 block text-sm font-medium leading-snug hover:text-primary hover:underline',
                                                 task.is_done &&
                                                     'text-muted-foreground line-through',
                                             )}
                                         >
                                             {task.title}
                                         </Link>
-                                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                                            <StatusPill status={task.status} />
+                                        <div className="flex items-center justify-between gap-2">
+                                            <TaskKey taskId={task.id} />
+                                            <AssigneeAvatars
+                                                assignees={task.assignees}
+                                            />
                                         </div>
-                                        {task.assignees.length > 0 && (
-                                            <p className="mb-2 truncate text-[11px] text-muted-foreground">
-                                                {task.assignees
-                                                    .map(
-                                                        (assignee) =>
-                                                            assignee.display_name ??
-                                                            'Member',
-                                                    )
-                                                    .join(', ')}
-                                            </p>
-                                        )}
                                         {canUpdateStatus && isMobile && (
                                             <label className="flex flex-col gap-1">
                                                 <span className="sr-only">

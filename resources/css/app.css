@@ -150,11 +150,15 @@
     }
 
     .tcm-greeting {
-        @apply font-display text-2xl font-semibold tracking-tight sm:text-[1.75rem] sm:leading-tight;
+        @apply text-2xl font-semibold tracking-tight text-foreground sm:text-[1.625rem] sm:leading-tight;
     }
 
     .tcm-card-title {
-        @apply text-[10.5px] font-bold tracking-[0.18em] text-muted-foreground uppercase;
+        @apply text-sm font-semibold text-foreground;
+    }
+
+    .tcm-section-eyebrow {
+        @apply text-xs font-medium text-muted-foreground;
     }
 
     .tcm-context-select {
@@ -162,7 +166,19 @@
     }
 
     .tcm-list-row {
-        @apply flex items-start gap-3 border-b border-border/50 px-1 py-2.5 transition-colors last:border-0 hover:bg-muted/30;
+        @apply flex items-start gap-3 rounded-md px-2 py-3 transition-colors last:border-0 hover:bg-muted/40;
+    }
+
+    .tcm-stat-chip {
+        @apply flex min-w-[4.5rem] flex-col gap-0.5 rounded-lg border border-border/60 bg-card px-3 py-2;
+    }
+
+    .tcm-stat-chip dt {
+        @apply text-xs font-medium text-muted-foreground;
+    }
+
+    .tcm-stat-chip dd {
+        @apply text-lg font-semibold leading-none tabular-nums;
     }
 
     .tcm-proj-bar-track {
@@ -179,7 +195,19 @@
     }
 
     .tcm-kanban-column {
-        @apply flex max-h-[min(70vh,36rem)] min-h-[12rem] w-[min(82vw,17.5rem)] shrink-0 snap-start flex-col rounded-xl border border-border/70 bg-muted/20 sm:w-[17.5rem];
+        @apply flex max-h-[min(72vh,40rem)] min-h-[14rem] w-[min(85vw,18rem)] shrink-0 snap-start flex-col rounded-lg border border-border/70 bg-muted/30 sm:w-[18rem];
+    }
+
+    .tcm-kanban-column-header {
+        @apply flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5;
+    }
+
+    .tcm-kanban-column-title {
+        @apply text-xs font-semibold text-foreground;
+    }
+
+    .tcm-kanban-count {
+        @apply inline-flex min-w-[1.25rem] items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground;
     }
 
     .tcm-kanban-column > ul {
@@ -187,7 +215,7 @@
     }
 
     .tcm-kanban-card {
-        @apply block rounded-lg border border-border/60 bg-card p-3 shadow-sm transition-colors hover:border-border hover:bg-muted/20;
+        @apply block rounded-md border border-border/60 bg-card p-3 shadow-sm transition-[border-color,box-shadow] hover:border-border;
     }
 
     .tcm-kanban-card--draggable {
@@ -212,7 +240,7 @@
     }
 
     .tcm-calendar-weekday {
-        @apply border-b border-border/60 bg-muted/30 px-2 py-2 text-center text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase;
+        @apply border-b border-border/60 bg-muted/30 px-2 py-2 text-center text-xs font-medium text-muted-foreground;
     }
 
     .tcm-calendar-day {

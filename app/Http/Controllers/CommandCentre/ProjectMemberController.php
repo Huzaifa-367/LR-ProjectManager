@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\CommandCentre;
 
+use App\Enums\OrganizationMemberStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommandCentre\StoreProjectMemberRequest;
 use App\Http\Requests\CommandCentre\UpdateProjectMemberRequest;
 use App\Models\Organization;
+use App\Models\OrganizationMember;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Support\CommandCentreResourcePresenter;
@@ -51,6 +53,26 @@ class ProjectMemberController extends Controller
 
         $roles = $project->roles()->orderBy('sort_order')->get(['id', 'name', 'slug'])->all();
 
+        $teamMemberIds = collect($team)->pluck('organization_member_id')->all();
+
+        $availableMembers = OrganizationMember::query()
+            ->where('organization_id', $organization->id)
+            ->where('status', OrganizationMemberStatus::Active)
+            ->when(
+                $teamMemberIds !== [],
+                fn ($query) => $query->whereNotIn('id', $teamMemberIds),
+            )
+            ->orderBy('display_name')
+            ->get(['id', 'display_name', 'email', 'title'])
+            ->map(fn (OrganizationMember $organizationMember): array => [
+                'id' => $organizationMember->id,
+                'display_name' => $organizationMember->display_name,
+                'email' => $organizationMember->email,
+                'title' => $organizationMember->title,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('projects/settings/team', [
             'organization' => [
                 'id' => $organization->id,
@@ -59,6 +81,7 @@ class ProjectMemberController extends Controller
             'project' => CommandCentreResourcePresenter::project($project),
             'team' => $team,
             'roles' => $roles,
+            'availableMembers' => $availableMembers,
             'permissions' => CommandCentreResourcePresenter::permissions($permissions, $member, $project),
         ]);
     }

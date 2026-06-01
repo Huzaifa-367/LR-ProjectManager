@@ -58,6 +58,19 @@ export function toDateTimeLocalValue(
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+/** Maps a datetime-local value to the server deadline string (local wall time). */
+export function dateTimeLocalToDeadlineDate(local: string): string {
+    const [datePart, timePart] = local.split('T');
+
+    if (!datePart || !timePart) {
+        return local;
+    }
+
+    const [hours, minutes] = timePart.split(':');
+
+    return `${datePart} ${hours}:${minutes}:00`;
+}
+
 export function diffCalendarDays(from: Date, to: Date): number {
     const fromDay = startOfDay(from);
     const toDay = startOfDay(to);

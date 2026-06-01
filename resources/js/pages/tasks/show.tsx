@@ -2,26 +2,45 @@ import AttachmentController from '@/actions/App/Http/Controllers/CommandCentre/A
 import ProjectController from '@/actions/App/Http/Controllers/CommandCentre/ProjectController';
 import TaskCommentController from '@/actions/App/Http/Controllers/CommandCentre/TaskCommentController';
 import TaskController from '@/actions/App/Http/Controllers/CommandCentre/TaskController';
-import { Form, Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import {
+    Calendar,
+    CheckCircle2,
+    ExternalLink,
+    FileText,
+    FolderKanban,
+    MessageSquare,
+    Paperclip,
+    Trash2,
+    User,
+} from 'lucide-react';
 import { AddCommentDialog } from '@/components/command-centre/add-comment-dialog';
+import { AssigneeAvatars } from '@/components/command-centre/assignee-avatars';
 import { CommandCard } from '@/components/command-centre/command-card';
-import { EditTaskDialog } from '@/components/command-centre/edit-task-dialog';
+import { InlineEditableDueDate } from '@/components/command-centre/inline-editable-due-date';
+import { InlineEditableSelect } from '@/components/command-centre/inline-editable-select';
+import { InlineEditableText } from '@/components/command-centre/inline-editable-text';
 import { EmptyState } from '@/components/command-centre/empty-state';
-import { ExpandableText } from '@/components/command-centre/expandable-text';
 import { PageShell } from '@/components/command-centre/page-shell';
 import { StatusPill } from '@/components/command-centre/status-pill';
+import { TaskDetailField } from '@/components/command-centre/task-detail-field';
+import { TaskEditableAssignees } from '@/components/command-centre/task-editable-assignees';
+import { TaskKey } from '@/components/command-centre/task-key';
 import { TaskKindBadge } from '@/components/command-centre/task-kind-badge';
 import { UploadAttachmentDialog } from '@/components/command-centre/upload-attachment-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { useTaskUpdate } from '@/hooks/use-task-update';
 import { canOrg } from '@/hooks/use-org-permissions';
 import type {
     CommandCentrePermissions,
     OrganizationSummary,
 } from '@/types/organization';
-import { cn } from '@/lib/utils';
-import { formatDueDateLabel, formatTaskKind } from '@/lib/task-options';
+import {
+    TASK_PRIORITIES,
+    TASK_STATUSES,
+    formatTaskKind,
+} from '@/lib/task-options';
 
 type TaskDetail = {
     id: number;
@@ -88,6 +107,20 @@ function formatBytes(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function commentInitials(name: string | null | undefined): string {
+    if (name === null || name === undefined || name.trim() === '') {
+        return '?';
+    }
+
+    const parts = name.trim().split(/\s+/);
+
+    if (parts.length >= 2) {
+        return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+    }
+
+    return name.slice(0, 2).toUpperCase();
+}
+
 export default function TaskShow({
     organization,
     task,
@@ -103,286 +136,105 @@ export default function TaskShow({
     const canComment = canOrg(permissions.org, 'org.task-comments.store');
     const canUpload = canOrg(permissions.org, 'org.attachments.store');
 
+    const { patchTask, syncAssignees } = useTaskUpdate(
+        organization.id,
+        task.id,
+    );
+
     const teamOptions = projectTeam.map((member) => ({
         id: member.organization_member_id,
         display_name: member.display_name,
         role_name: member.role_name,
     }));
 
-    const selectedAssigneeIds = task.assignees.map((assignee) => assignee.id);
+    const assigneeIds = task.assignees.map((assignee) => assignee.id);
 
     return (
         <>
             <Head title={task.title} />
             <PageShell
-                title={task.title}
-                subtitle={task.project_name ?? 'Project'}
-                stats={[
-                    { label: 'Type', value: formatTaskKind(task.kind), tone: 'accent' },
-                    { label: 'Status', value: task.status.replace(/_/g, ' ') },
+                title={
+                    <InlineEditableText
+                        value={task.title}
+                        canEdit={canUpdate}
+                        onSave={(title) => patchTask({ title })}
+                        placeholder="Task title"
+                        displayClassName="tcm-greeting block"
+                        inputClassName="text-lg font-semibold"
+                    />
+                }
+                breadcrumbs={[
                     {
-                        label: 'Assignees',
-                        value: task.assignees.length,
+                        title: organization.name,
+                        href: `/organizations/${organization.id}/command-centre`,
+                    },
+                    {
+                        title: 'Tasks',
+                        href: TaskController.index.url(organization.id),
+                    },
+                    {
+                        title: task.title,
+                        href: TaskController.show.url([
+                            organization.id,
+                            task.id,
+                        ]),
                     },
                 ]}
                 actions={
-                    <div className="flex flex-wrap gap-2">
-                        {canUpdate && (
-                            <EditTaskDialog
-                                organizationId={organization.id}
-                                task={task}
-                                canSyncAssignees={canSyncAssignees}
-                                teamMembers={teamOptions}
-                            />
-                        )}
-                        {task.project_id > 0 && (
-                            <Button asChild variant="outline" size="sm">
-                                <Link
-                                    href={ProjectController.show.url([
-                                        organization.id,
-                                        task.project_id,
-                                    ])}
-                                >
-                                    Project board
-                                </Link>
-                            </Button>
-                        )}
-                        <Button asChild variant="outline" size="sm">
-                            <Link
-                                href={TaskController.index.url(organization.id)}
-                            >
-                                All tasks
-                            </Link>
-                        </Button>
-                    </div>
-                }
-            >
-                <div className="grid gap-[18px] xl:grid-cols-[minmax(0,20rem)_1fr]">
-                    <aside className="flex flex-col gap-[18px]">
-                        <CommandCard title="Summary" dot="crimson">
-                            <div className="space-y-3 text-sm">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <TaskKindBadge kind={task.kind} />
-                                    <StatusPill status={task.status} />
-                                    {task.is_done && (
-                                        <Badge variant="secondary">Done</Badge>
-                                    )}
-                                </div>
-                                {task.priority && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Priority:{' '}
-                                        <span className="font-medium capitalize text-foreground">
-                                            {task.priority}
-                                        </span>
-                                    </p>
-                                )}
-                                {formatDueDateLabel(task.deadline_date) && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Due:{' '}
-                                        <span className="font-medium text-foreground">
-                                            {formatDueDateLabel(
-                                                task.deadline_date,
-                                            )}
-                                        </span>
-                                    </p>
-                                )}
-                                {task.external_link && (
-                                    <a
-                                        href={task.external_link}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-block text-sm text-primary hover:underline"
-                                    >
-                                        Open external link
-                                    </a>
-                                )}
-                            </div>
-                        </CommandCard>
-
-                        <CommandCard
-                            title="Project team"
-                            description="Assign members already on this project."
-                            dot="blue"
-                            badge={
-                                projectTeam.length > 0 ? (
-                                    <Badge variant="secondary">
-                                        {projectTeam.length}
-                                    </Badge>
-                                ) : undefined
-                            }
-                        >
-                            {canSyncAssignees ? (
-                                <Form
-                                    {...TaskController.syncAssignees.form([
+                    canToggle ? (
+                        <Button
+                            size="sm"
+                            variant={task.is_done ? 'outline' : 'default'}
+                            onClick={() => {
+                                router.patch(
+                                    TaskController.toggleDone.url([
                                         organization.id,
                                         task.id,
-                                    ])}
-                                    className="space-y-3"
-                                >
-                                    {({ processing }) => (
-                                        <>
-                                            {teamOptions.length === 0 ? (
-                                                <EmptyState>
-                                                    Add members to the project
-                                                    team first.
-                                                </EmptyState>
-                                            ) : (
-                                                <ul className="space-y-2">
-                                                    {teamOptions.map((member) => {
-                                                        const isSelected =
-                                                            selectedAssigneeIds.includes(
-                                                                member.id,
-                                                            );
+                                    ]),
+                                );
+                            }}
+                        >
+                            <CheckCircle2 className="size-4" />
+                            {task.is_done ? 'Reopen' : 'Mark done'}
+                        </Button>
+                    ) : undefined
+                }
+            >
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <TaskKey taskId={task.id} />
+                    <TaskKindBadge kind={task.kind} />
+                    <StatusPill status={task.status} />
+                    {task.is_done && (
+                        <Badge variant="secondary">Completed</Badge>
+                    )}
+                </div>
 
-                                                        return (
-                                                            <li key={member.id}>
-                                                                <label
-                                                                    className={cn(
-                                                                        'flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 px-3 py-2',
-                                                                        isSelected &&
-                                                                            'border-primary/30 bg-primary/5',
-                                                                        processing &&
-                                                                            'opacity-60',
-                                                                    )}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        name="assignee_member_ids[]"
-                                                                        value={
-                                                                            member.id
-                                                                        }
-                                                                        defaultChecked={
-                                                                            isSelected
-                                                                        }
-                                                                        disabled={
-                                                                            processing
-                                                                        }
-                                                                        className="size-4 rounded border-input"
-                                                                    />
-                                                                    <span className="min-w-0 flex-1">
-                                                                        <span className="block text-sm font-medium">
-                                                                            {member.display_name ??
-                                                                                'Member'}
-                                                                        </span>
-                                                                        {member.role_name && (
-                                                                            <span className="text-xs text-muted-foreground">
-                                                                                {
-                                                                                    member.role_name
-                                                                                }
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                </label>
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
-                                            )}
-                                            <Button
-                                                type="submit"
-                                                size="sm"
-                                                variant="secondary"
-                                                disabled={
-                                                    processing ||
-                                                    teamOptions.length === 0
-                                                }
-                                            >
-                                                {processing && <Spinner />}
-                                                Save assignees
-                                            </Button>
-                                        </>
-                                    )}
-                                </Form>
-                            ) : projectTeam.length === 0 ? (
-                                <EmptyState>
-                                    No project team members yet.
-                                </EmptyState>
-                            ) : (
-                                <ul className="divide-y divide-border/50 rounded-lg border border-border/60">
-                                    {task.assignees.length === 0 ? (
-                                        <li className="px-3 py-2 text-sm text-muted-foreground">
-                                            Unassigned
-                                        </li>
-                                    ) : (
-                                        task.assignees.map((assignee) => (
-                                            <li
-                                                key={assignee.id}
-                                                className="flex items-center justify-between gap-2 px-3 py-2"
-                                            >
-                                                <span className="text-sm">
-                                                    {assignee.display_name ??
-                                                        'Member'}
-                                                </span>
-                                                {assignee.is_primary && (
-                                                    <Badge
-                                                        variant="outline"
-                                                        className="text-[10px]"
-                                                    >
-                                                        Primary
-                                                    </Badge>
-                                                )}
-                                            </li>
-                                        ))
-                                    )}
-                                </ul>
-                            )}
-                        </CommandCard>
-
-                        <CommandCard title="Actions" dot="gold">
-                            <div className="flex flex-col gap-2">
-                                {canToggle && (
-                                    <Button
-                                        size="sm"
-                                        onClick={() => {
-                                            router.patch(
-                                                TaskController.toggleDone.url([
-                                                    organization.id,
-                                                    task.id,
-                                                ]),
-                                            );
-                                        }}
-                                    >
-                                        {task.is_done
-                                            ? 'Mark incomplete'
-                                            : 'Mark done'}
-                                    </Button>
-                                )}
-                                {canDelete && (
-                                    <Button
-                                        size="sm"
-                                        variant="destructive"
-                                        onClick={() => {
-                                            router.delete(
-                                                TaskController.destroy.url([
-                                                    organization.id,
-                                                    task.id,
-                                                ]),
-                                            );
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
-                                )}
-                            </div>
-                        </CommandCard>
-                    </aside>
-
-                    <div className="flex min-w-0 flex-col gap-[18px]">
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem]">
+                    <div className="flex min-w-0 flex-col gap-6">
                         <CommandCard title="Description" dot="green">
-                            {task.description ? (
-                                <ExpandableText
-                                    text={task.description}
-                                    maxLength={480}
-                                    textClassName="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap"
-                                />
-                            ) : (
-                                <EmptyState>No description yet.</EmptyState>
-                            )}
+                            <InlineEditableText
+                                value={task.description ?? ''}
+                                canEdit={canUpdate}
+                                onSave={(description) =>
+                                    patchTask({ description })
+                                }
+                                multiline
+                                placeholder="Add a description — objectives, steps, acceptance criteria…"
+                                emptyLabel="No description yet"
+                                displayClassName="text-sm leading-relaxed text-foreground/90"
+                            />
                         </CommandCard>
 
                         <CommandCard
                             title="Comments"
                             dot="blue"
+                            badge={
+                                comments.length > 0 ? (
+                                    <Badge variant="secondary">
+                                        {comments.length}
+                                    </Badge>
+                                ) : undefined
+                            }
                             action={
                                 canComment ? (
                                     <AddCommentDialog
@@ -393,21 +245,52 @@ export default function TaskShow({
                             }
                         >
                             {comments.length === 0 ? (
-                                <EmptyState>No comments yet.</EmptyState>
+                                <EmptyState>
+                                    <MessageSquare className="mx-auto mb-2 size-8 opacity-40" />
+                                    No comments yet.
+                                </EmptyState>
                             ) : (
-                                <ul className="divide-y divide-border/50">
+                                <ul className="space-y-3">
                                     {comments.map((comment) => (
-                                        <li key={comment.id} className="py-3">
-                                            <div className="mb-1 flex items-center justify-between gap-2">
-                                                <span className="text-sm font-medium">
-                                                    {comment.author
-                                                        .display_name ??
-                                                        'Member'}
-                                                </span>
+                                        <li
+                                            key={comment.id}
+                                            className="flex gap-3 rounded-lg border border-border/60 bg-muted/25 p-3"
+                                        >
+                                            <span
+                                                className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+                                                aria-hidden
+                                            >
+                                                {commentInitials(
+                                                    comment.author
+                                                        .display_name,
+                                                )}
+                                            </span>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                                                    <span className="text-sm font-medium">
+                                                        {comment.author
+                                                            .display_name ??
+                                                            'Member'}
+                                                    </span>
+                                                    {comment.created_at && (
+                                                        <time
+                                                            className="text-xs text-muted-foreground"
+                                                            dateTime={
+                                                                comment.created_at
+                                                            }
+                                                        >
+                                                            {comment.created_at}
+                                                        </time>
+                                                    )}
+                                                </div>
+                                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                                                    {comment.body}
+                                                </p>
                                                 {comment.can_edit && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
+                                                        className="mt-2 h-7 px-2 text-xs text-muted-foreground"
                                                         onClick={() => {
                                                             router.delete(
                                                                 TaskCommentController.destroy.url(
@@ -420,13 +303,11 @@ export default function TaskShow({
                                                             );
                                                         }}
                                                     >
+                                                        <Trash2 className="size-3.5" />
                                                         Delete
                                                     </Button>
                                                 )}
                                             </div>
-                                            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                                                {comment.body}
-                                            </p>
                                         </li>
                                     ))}
                                 </ul>
@@ -436,6 +317,13 @@ export default function TaskShow({
                         <CommandCard
                             title="Attachments"
                             dot="gold"
+                            badge={
+                                attachments.length > 0 ? (
+                                    <Badge variant="secondary">
+                                        {attachments.length}
+                                    </Badge>
+                                ) : undefined
+                            }
                             action={
                                 canUpload ? (
                                     <UploadAttachmentDialog
@@ -446,30 +334,42 @@ export default function TaskShow({
                             }
                         >
                             {attachments.length === 0 ? (
-                                <EmptyState>No attachments yet.</EmptyState>
+                                <EmptyState>
+                                    <Paperclip className="mx-auto mb-2 size-8 opacity-40" />
+                                    No files attached.
+                                </EmptyState>
                             ) : (
-                                <ul className="divide-y divide-border/50">
+                                <ul className="space-y-2">
                                     {attachments.map((attachment) => (
                                         <li
                                             key={attachment.id}
-                                            className="tcm-list-row items-center justify-between"
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2.5"
                                         >
-                                            <div>
-                                                <p className="text-sm font-medium">
-                                                    {
-                                                        attachment.original_filename
-                                                    }
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {formatBytes(
-                                                        attachment.size_bytes,
-                                                    )}
-                                                </p>
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                                                    <FileText className="size-4 text-muted-foreground" />
+                                                </span>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium">
+                                                        {
+                                                            attachment.original_filename
+                                                        }
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatBytes(
+                                                            attachment.size_bytes,
+                                                        )}
+                                                        {attachment.uploaded_by
+                                                            ? ` · ${attachment.uploaded_by}`
+                                                            : ''}
+                                                    </p>
+                                                </div>
                                             </div>
                                             {attachment.can_delete && (
                                                 <Button
-                                                    variant="outline"
+                                                    variant="ghost"
                                                     size="sm"
+                                                    className="shrink-0"
                                                     onClick={() => {
                                                         router.delete(
                                                             AttachmentController.destroy.url(
@@ -490,6 +390,238 @@ export default function TaskShow({
                             )}
                         </CommandCard>
                     </div>
+
+                    <aside className="flex flex-col gap-4">
+                        <section className="rounded-lg border border-border/70 bg-card p-4 shadow-sm">
+                            <h2 className="mb-3 text-sm font-semibold">
+                                Details
+                            </h2>
+                            <dl className="space-y-4">
+                                <TaskDetailField label="Type">
+                                    {formatTaskKind(task.kind)}
+                                </TaskDetailField>
+                                <TaskDetailField label="Status">
+                                    <InlineEditableSelect
+                                        value={task.status}
+                                        options={[...TASK_STATUSES]}
+                                        canEdit={canUpdate}
+                                        onSave={(status) =>
+                                            patchTask({ status })
+                                        }
+                                        renderValue={(status) => (
+                                            <StatusPill status={status} />
+                                        )}
+                                    />
+                                </TaskDetailField>
+                                <TaskDetailField label="Priority">
+                                    <InlineEditableSelect
+                                        value={task.priority ?? ''}
+                                        options={TASK_PRIORITIES.map(
+                                            (option) => ({
+                                                value: option.value,
+                                                label: option.label,
+                                            }),
+                                        )}
+                                        canEdit={canUpdate}
+                                        allowEmpty
+                                        emptyValue=""
+                                        placeholder="None"
+                                        renderValue={(priority) =>
+                                            priority ? (
+                                                <span className="capitalize">
+                                                    {TASK_PRIORITIES.find(
+                                                        (entry) =>
+                                                            entry.value ===
+                                                            priority,
+                                                    )?.label ?? priority}
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    None
+                                                </span>
+                                            )
+                                        }
+                                        onSave={(priority) =>
+                                            patchTask({
+                                                priority:
+                                                    priority === ''
+                                                        ? null
+                                                        : priority,
+                                            })
+                                        }
+                                    />
+                                </TaskDetailField>
+                                <TaskDetailField label="Due">
+                                    <div className="flex items-center gap-1.5">
+                                        <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+                                        <InlineEditableDueDate
+                                            value={task.deadline_date}
+                                            canEdit={canUpdate}
+                                            onSave={(deadline_date) =>
+                                                patchTask({ deadline_date })
+                                            }
+                                        />
+                                    </div>
+                                </TaskDetailField>
+                                {task.project_id > 0 && (
+                                    <TaskDetailField label="Project">
+                                        <Link
+                                            href={ProjectController.show.url([
+                                                organization.id,
+                                                task.project_id,
+                                            ])}
+                                            className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline"
+                                        >
+                                            <FolderKanban className="size-3.5 shrink-0" />
+                                            {task.project_name ?? 'Project'}
+                                        </Link>
+                                    </TaskDetailField>
+                                )}
+                                <TaskDetailField label="Link">
+                                    {task.external_link || canUpdate ? (
+                                        <div className="flex items-start gap-1.5">
+                                            <ExternalLink className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                                            <InlineEditableText
+                                                value={
+                                                    task.external_link ?? ''
+                                                }
+                                                canEdit={canUpdate}
+                                                inputType="url"
+                                                placeholder="https://…"
+                                                emptyLabel="Add link"
+                                                onSave={(external_link) =>
+                                                    patchTask({
+                                                        external_link:
+                                                            external_link ===
+                                                            ''
+                                                                ? null
+                                                                : external_link,
+                                                    })
+                                                }
+                                                displayClassName="text-sm text-primary"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                            —
+                                        </span>
+                                    )}
+                                    {task.external_link && (
+                                        <a
+                                            href={task.external_link}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="mt-1 inline-block text-xs text-primary hover:underline"
+                                        >
+                                            Open in new tab
+                                        </a>
+                                    )}
+                                </TaskDetailField>
+                            </dl>
+                        </section>
+
+                        <section className="rounded-lg border border-border/70 bg-card p-4 shadow-sm">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                                <h2 className="text-sm font-semibold">
+                                    People
+                                </h2>
+                                {task.assignees.length > 0 && (
+                                    <AssigneeAvatars
+                                        assignees={task.assignees}
+                                    />
+                                )}
+                            </div>
+
+                            {canSyncAssignees && teamOptions.length > 0 ? (
+                                <TaskEditableAssignees
+                                    selectedIds={assigneeIds}
+                                    members={teamOptions}
+                                    canEdit
+                                    onSave={syncAssignees}
+                                />
+                            ) : task.assignees.length === 0 ? (
+                                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <User className="size-4 shrink-0" />
+                                    Unassigned
+                                </p>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {task.assignees.map((assignee) => (
+                                        <li
+                                            key={assignee.id}
+                                            className="flex items-center justify-between gap-2 text-sm"
+                                        >
+                                            <span>
+                                                {assignee.display_name ??
+                                                    'Member'}
+                                            </span>
+                                            {assignee.is_primary && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-xs"
+                                                >
+                                                    Lead
+                                                </Badge>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </section>
+
+                        <div className="flex flex-col gap-2">
+                            {task.project_id > 0 && (
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-start"
+                                >
+                                    <Link
+                                        href={ProjectController.show.url([
+                                            organization.id,
+                                            task.project_id,
+                                        ])}
+                                    >
+                                        <FolderKanban className="size-4" />
+                                        View on board
+                                    </Link>
+                                </Button>
+                            )}
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start"
+                            >
+                                <Link
+                                    href={TaskController.index.url(
+                                        organization.id,
+                                    )}
+                                >
+                                    Back to all tasks
+                                </Link>
+                            </Button>
+                            {canDelete && (
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="w-full"
+                                    onClick={() => {
+                                        router.delete(
+                                            TaskController.destroy.url([
+                                                organization.id,
+                                                task.id,
+                                            ]),
+                                        );
+                                    }}
+                                >
+                                    <Trash2 className="size-4" />
+                                    Delete task
+                                </Button>
+                            )}
+                        </div>
+                    </aside>
                 </div>
             </PageShell>
         </>

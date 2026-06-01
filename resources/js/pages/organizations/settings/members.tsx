@@ -86,20 +86,29 @@ export default function OrganizationMembersSettings({
                     activeHref,
                 )}
                 actions={
-                    <div className="flex flex-wrap gap-2">
-                        {canStore && defaultRoleId !== undefined && (
-                            <AddMemberDialog
-                                organizationId={organization.id}
-                                roles={roles}
-                                defaultRoleId={defaultRoleId}
-                            />
-                        )}
-                        {canInvite && defaultRoleId !== undefined && (
-                            <InviteMemberDialog
-                                organizationId={organization.id}
-                                roles={roles}
-                                defaultRoleId={defaultRoleId}
-                            />
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            {canStore && defaultRoleId !== undefined && (
+                                <AddMemberDialog
+                                    organizationId={organization.id}
+                                    roles={roles}
+                                    defaultRoleId={defaultRoleId}
+                                />
+                            )}
+                            {canInvite && defaultRoleId !== undefined && (
+                                <InviteMemberDialog
+                                    organizationId={organization.id}
+                                    roles={roles}
+                                    defaultRoleId={defaultRoleId}
+                                />
+                            )}
+                        </div>
+                        {!canStore && !canInvite && (
+                            <p className="max-w-sm text-right text-xs text-muted-foreground">
+                                You can view the roster but cannot add or
+                                invite members with your current organization
+                                role.
+                            </p>
                         )}
                     </div>
                 }

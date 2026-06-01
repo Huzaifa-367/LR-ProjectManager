@@ -54,10 +54,10 @@ type ProjectShowProps = {
 };
 
 const healthDotClass: Record<string, string> = {
-    active: 'bg-primary shadow-[0_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)]',
-    progressing: 'bg-blue-500 shadow-[0_0_8px_rgba(91,156,246,0.35)]',
-    steady: 'bg-emerald-500 shadow-[0_0_8px_rgba(46,204,113,0.35)]',
-    at_risk: 'bg-amber-500 shadow-[0_0_8px_rgba(212,168,67,0.35)]',
+    active: 'bg-primary',
+    progressing: 'bg-blue-500',
+    steady: 'bg-emerald-500',
+    at_risk: 'bg-amber-500',
 };
 
 export default function ProjectShow({
@@ -85,7 +85,23 @@ export default function ProjectShow({
             <Head title={project.name} />
             <PageShell
                 title={project.name}
-                subtitle={organization.name}
+                breadcrumbs={[
+                    {
+                        title: organization.name,
+                        href: `/organizations/${organization.id}/command-centre`,
+                    },
+                    {
+                        title: 'Projects',
+                        href: ProjectController.index.url(organization.id),
+                    },
+                    {
+                        title: project.name,
+                        href: ProjectController.show.url([
+                            organization.id,
+                            project.id,
+                        ]),
+                    },
+                ]}
                 stats={[
                     {
                         label: 'Progress',
@@ -159,9 +175,9 @@ export default function ProjectShow({
                                 )}
 
                                 <div>
-                                    <div className="mb-2 flex items-center justify-between text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                                    <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
                                         <span>Progress</span>
-                                        <span className="font-display text-primary">
+                                        <span className="tabular-nums text-primary">
                                             {project.progress_percent}%
                                         </span>
                                     </div>
@@ -230,6 +246,25 @@ export default function ProjectShow({
                                     ))}
                                 </div>
                             )}
+                            {canManageTeam && (
+                                <Button
+                                    asChild
+                                    variant="link"
+                                    size="sm"
+                                    className="mt-2 h-auto px-0"
+                                >
+                                    <Link
+                                        href={ProjectMemberController.index.url(
+                                            [
+                                                organization.id,
+                                                project.id,
+                                            ],
+                                        )}
+                                    >
+                                        Manage team
+                                    </Link>
+                                </Button>
+                            )}
                         </CommandCard>
 
                         <CommandCard title="Settings" dot="gold">
@@ -267,8 +302,8 @@ export default function ProjectShow({
                     </aside>
 
                     <CommandCard
-                        title="Task board"
-                        description="Tasks, decisions, and reminders share the board — each type is color-coded."
+                        title="Board"
+                        description="Drag cards between columns to update status. Task type is shown on each card."
                         dot="blue"
                         noPadding
                         className="min-w-0"

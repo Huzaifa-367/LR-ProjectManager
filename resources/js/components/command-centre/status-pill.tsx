@@ -26,7 +26,7 @@ export function StatusPill({
     return (
         <span
             className={cn(
-                'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
+                'inline-flex rounded-md px-2 py-0.5 text-xs font-medium capitalize',
                 statusClass[status] ??
                     'bg-muted text-muted-foreground',
                 className,

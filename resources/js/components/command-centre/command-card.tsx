@@ -13,10 +13,10 @@ type CommandCardProps = PropsWithChildren<{
 }>;
 
 const dotClass: Record<NonNullable<CommandCardProps['dot']>, string> = {
-    crimson: 'bg-primary shadow-[0_0_8px_color-mix(in_oklab,var(--primary)_40%,transparent)]',
-    gold: 'bg-amber-500 shadow-[0_0_8px_rgba(212,168,67,0.35)]',
-    blue: 'bg-blue-500 shadow-[0_0_8px_rgba(91,156,246,0.35)]',
-    green: 'bg-emerald-500 shadow-[0_0_8px_rgba(46,204,113,0.35)]',
+    crimson: 'bg-primary',
+    gold: 'bg-amber-500',
+    blue: 'bg-blue-500',
+    green: 'bg-emerald-500',
 };
 
 export function CommandCard({
@@ -33,15 +33,18 @@ export function CommandCard({
     return (
         <section
             className={cn(
-                'overflow-hidden rounded-xl border border-border/70 bg-card transition-colors hover:border-border',
+                'overflow-hidden rounded-lg border border-border/70 bg-card shadow-sm',
                 className,
             )}
         >
-            <header className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5 sm:px-[18px]">
-                <div className="min-w-0 space-y-1">
+            <header className="flex items-center justify-between gap-3 border-b border-border/60 bg-muted/20 px-4 py-3 sm:px-5">
+                <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2">
                         <span
-                            className={cn('size-1.5 shrink-0 rounded-full', dotClass[dot])}
+                            className={cn(
+                                'size-2 shrink-0 rounded-sm',
+                                dotClass[dot],
+                            )}
                             aria-hidden
                         />
                         <h2 className="tcm-card-title">{title}</h2>
@@ -57,7 +60,7 @@ export function CommandCard({
             </header>
             <div
                 className={cn(
-                    !noPadding && 'px-4 py-3 sm:px-[18px] sm:py-3.5',
+                    !noPadding && 'px-4 py-3 sm:px-5 sm:py-4',
                     contentClassName,
                 )}
             >

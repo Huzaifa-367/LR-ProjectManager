@@ -10,6 +10,7 @@ import { TasksCalendarView } from '@/components/command-centre/tasks-calendar-vi
 import type { TasksListItem } from '@/components/command-centre/tasks-list-view';
 import { TasksListView } from '@/components/command-centre/tasks-list-view';
 import { TasksViewToolbar } from '@/components/command-centre/tasks-view-toolbar';
+import { WorkspaceToolbar } from '@/components/command-centre/workspace-toolbar';
 import { Button } from '@/components/ui/button';
 import { canOrg } from '@/hooks/use-org-permissions';
 import { useTasksViewPreference } from '@/hooks/use-tasks-view-preference';
@@ -66,7 +67,16 @@ export default function TasksIndex({
             <Head title="Tasks" />
             <PageShell
                 title="Tasks"
-                subtitle={organization.name}
+                breadcrumbs={[
+                    {
+                        title: organization.name,
+                        href: `/organizations/${organization.id}/command-centre`,
+                    },
+                    {
+                        title: 'Tasks',
+                        href: `/organizations/${organization.id}/tasks`,
+                    },
+                ]}
                 stats={[{ label: 'Visible', value: tasks.length }]}
                 actions={
                     <div className="flex flex-wrap gap-2">
@@ -92,18 +102,37 @@ export default function TasksIndex({
                 }
             >
                 <CommandCard
-                    title="All tasks"
+                    title="Board"
                     description={viewDescription}
                     dot="crimson"
+                    noPadding={view === 'kanban'}
+                    contentClassName={view === 'kanban' ? 'p-3 sm:p-4' : undefined}
                 >
-                    <div className="mb-4 border-b border-border/50 pb-4">
+                    <WorkspaceToolbar className="mb-4">
                         <TasksViewToolbar
                             view={view}
                             calendarPeriod={calendarPeriod}
                             onViewChange={setView}
                             onCalendarPeriodChange={setCalendarPeriod}
                         />
-                    </div>
+                        {filters.project_id !== null && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs"
+                                onClick={() => {
+                                    router.get(
+                                        `/organizations/${organization.id}/tasks`,
+                                        {},
+                                        { preserveState: true },
+                                    );
+                                }}
+                            >
+                                Clear project filter
+                            </Button>
+                        )}
+                    </WorkspaceToolbar>
                     {view === 'list' && (
                         <TasksListView
                             organizationId={organization.id}
